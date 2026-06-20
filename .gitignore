@@ -1,0 +1,12 @@
+# dependencies / build artifacts
+node_modules/
+tools/node_modules/
+*.zip
+*.log
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+# editor
+.vscode/
+.idea/

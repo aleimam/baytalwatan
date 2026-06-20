@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>أراضي المرحلة الحادية عشر — هيئة المجتمعات العمرانية الجديدة</title>
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<header class="appbar">
+  <div class="wrap bar">
+    <div class="brand">
+      <div class="logo">NUCA</div>
+      <div>
+        <h1>أراضي المرحلة الحادية عشر</h1>
+        <div class="sub">دليل القطع المتاحة للحجز · بحث وتصفية وخرائط · لقطة ٢٠٢٦/٠٦/٢٠</div>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button class="tab on" data-view="list">القائمة والخرائط</button>
+      <button class="tab" data-view="analytics">لوحة التحليلات</button>
+      <button class="btn ghost" id="themeBtn" title="تبديل السمة">☀️</button>
+    </nav>
+  </div>
+</header>
+
+<!-- ============ LIST + MAP VIEW ============ -->
+<main id="view-list" class="wrap view">
+  <section class="filters card">
+    <div class="frow">
+      <div class="fg city-dd">
+        <label>المدينة</label>
+        <button type="button" class="dd-btn" id="cityBtn"><span id="cityBtnTxt">كل المدن</span><span>▾</span></button>
+        <div class="dd-panel" id="cityPanel">
+          <div class="dd-actions"><a id="cityAll">الكل</a><a id="cityNone">لا شيء</a></div>
+          <div id="cityList"></div>
+        </div>
+      </div>
+      <div class="fg"><label>سعر المتر الإجمالي</label><div class="mm"><input type="number" id="pMin" placeholder="من"><span>–</span><input type="number" id="pMax" placeholder="إلى"></div></div>
+      <div class="fg"><label>المساحة (م²)</label><div class="mm"><input type="number" id="aMin" placeholder="من"><span>–</span><input type="number" id="aMax" placeholder="إلى"></div></div>
+      <div class="fg"><label>السعر الإجمالي</label><div class="mm"><input type="number" id="tMin" placeholder="من"><span>–</span><input type="number" id="tMax" placeholder="إلى"></div></div>
+      <div class="fg"><label>الدفعة المقدمة</label><div class="mm"><input type="number" id="dMin" placeholder="من"><span>–</span><input type="number" id="dMax" placeholder="إلى"></div></div>
+      <div class="fg"><label>التميّز</label>
+        <select id="premSel"><option value="">الكل</option><option value="any">أي تميّز</option><option value="none">بدون</option><option value="corner">ناصية</option><option value="garden">حدائق</option><option value="sea">بحر / نيل</option></select>
+      </div>
+      <div class="fg grow"><label>بحث (رقم القطعة / الحي / المربع)</label><input type="text" id="searchBox" placeholder="اكتب للبحث…"></div>
+      <div class="fg"><label>&nbsp;</label><button class="btn" id="resetBtn">إعادة ضبط</button></div>
+    </div>
+    <div class="frow sub-row">
+      <span class="count-pill" id="countPill">…</span>
+      <span class="spacer"></span>
+      <label class="inline">ترتيب حسب
+        <select id="sortSel"></select>
+      </label>
+      <button class="btn ghost" id="dirBtn" title="اتجاه الترتيب">▼ تنازلي</button>
+      <label class="inline">لكل صفحة
+        <select id="perSel"><option>25</option><option selected>50</option><option>100</option><option>200</option></select>
+      </label>
+      <button class="btn" id="exportBtn">⤓ تصدير CSV</button>
+    </div>
+  </section>
+
+  <section class="card tablecard">
+    <div class="tbl-wrap">
+      <table class="data" id="tbl"><thead></thead><tbody></tbody></table>
+    </div>
+    <div class="pager" id="pager"></div>
+  </section>
+</main>
+
+<!-- ============ ANALYTICS VIEW ============ -->
+<main id="view-analytics" class="wrap view" hidden>
+  <div class="hint" id="anFilterHint"></div>
+  <section class="kpis" id="kpis"></section>
+  <div class="agrid">
+    <div class="card a8"><div class="ch-head"><h3>المؤشرات حسب المدينة</h3>
+      <div class="seg" id="cityMetric"><button class="on" data-m="count">عدد القطع</button><button data-m="value">القيمة</button><button data-m="area">المساحة</button><button data-m="avgM">متوسط م²</button></div></div>
+      <div class="chart tall" id="cByCity"></div></div>
+    <div class="card a4"><h3>شرائح السعر الإجمالي</h3><div class="chart tall" id="cSeg"></div></div>
+    <div class="card a7"><h3>خريطة قيمة المعروض (مدينة ← مشروع)</h3><div class="chart tall" id="cTree"></div></div>
+    <div class="card a5"><h3>تحليل ميزات القطع</h3><div class="chart tall" id="cPrem"></div></div>
+    <div class="card a7"><h3>المساحة مقابل السعر الإجمالي</h3><div class="chart tall" id="cScatter"></div></div>
+    <div class="card a5"><h3>توزيع سعر المتر الإجمالي</h3><div class="chart" id="cHistP"></div></div>
+    <div class="card a7"><h3>نطاق سعر المتر حسب المدينة</h3><div class="chart tall" id="cBox"></div></div>
+    <div class="card a5"><h3>توزيع مساحات القطع</h3><div class="chart" id="cHistA"></div></div>
+  </div>
+</main>
+
+<!-- ============ MAP MODAL ============ -->
+<div id="mapModal" class="modal" hidden>
+  <div class="modal-bg" data-close></div>
+  <div class="modal-box">
+    <div class="modal-head">
+      <div>
+        <h3 id="mTitle">—</h3>
+        <div class="msub" id="mSub">—</div>
+      </div>
+      <div class="mtools">
+        <button class="btn ghost" id="mZoomOut">−</button>
+        <button class="btn ghost" id="mZoomIn">+</button>
+        <button class="btn ghost" id="mReset">⟲</button>
+        <a class="btn ghost" id="mOpen" target="_blank" title="فتح الخريطة كاملة">⤢</a>
+        <button class="btn" data-close>إغلاق ✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="viewer" id="viewer">
+        <img id="mImg" alt="خريطة المنطقة" draggable="false">
+        <div class="viewer-hint" id="mHint"></div>
+      </div>
+      <aside class="plot-info" id="plotInfo"></aside>
+    </div>
+  </div>
+</div>
+
+<footer class="wrap foot" id="foot"></footer>
+
+<script src="assets/data.js"></script>
+<script src="assets/echarts.min.js"></script>
+<script src="assets/analytics.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

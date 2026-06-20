@@ -1,0 +1,14 @@
+{
+  "name": "baytalwatan-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Build/refresh scripts for the NUCA 11th-stage lands app: stitch deep-zoom maps and build the SQLite/MySQL data + static fallback from the source CSV.",
+  "scripts": {
+    "build-db": "node build-db.js",
+    "fetch-maps": "node fetch-maps.js"
+  },
+  "dependencies": {
+    "jimp": "0.22.12",
+    "sql.js": "1.12.0"
+  }
+}

@@ -241,6 +241,7 @@ $('#langBtn').onclick=()=>{ I18N.set(I18N.lang==='ar'?'en':'ar'); applyLang(); }
 function applyLang(){
   I18N.applyStatic();
   $('#langBtn').textContent=I18N.t('lang_btn');
+  $$('#authLang button').forEach(b=>b.classList.toggle('on', b.dataset.setlang===I18N.lang));
   if(SETTINGS) applySettings(SETTINGS);
   if(typeof APP_INITED!=='undefined' && APP_INITED){ cityBtnTxt(); buildSortSelect(); renderFooter(); renderList(); reRenderAnalytics(); }
 }
@@ -283,13 +284,14 @@ function enterApp(){
   initApp();
 }
 function wireAuth(){
+  $$('#authLang button').forEach(b=>b.onclick=()=>{ I18N.set(b.dataset.setlang); applyLang(); });
   $$('.auth-tab').forEach(b=>b.onclick=()=>{ $$('.auth-tab').forEach(x=>x.classList.toggle('on',x===b)); $('#loginForm').hidden=b.dataset.form!=='login'; $('#registerForm').hidden=b.dataset.form!=='register'; });
   const submit=async(form,errId,action,fields)=>{ const er=$(errId), btn=form.querySelector('button[type=submit]'); er.textContent=''; btn.disabled=true; const d={}; fields.forEach(f=>d[f]=form[f].value); const r=await Auth.post(action,d); btn.disabled=false; if(r.ok) enterApp(); else er.textContent=r.error; };
   $('#loginForm').onsubmit=e=>{ e.preventDefault(); submit(e.target,'#loginErr','login',['email','password']); };
   $('#registerForm').onsubmit=e=>{ e.preventDefault(); submit(e.target,'#registerErr','register',['full_name','email','phone','password']); };
   const lb=$('#logoutBtn'); if(lb) lb.onclick=()=>Auth.logout();
 }
-I18N.applyStatic(); $('#langBtn').textContent=I18N.t('lang_btn');
+applyLang();
 fetch('admin.php?action=settings_get').then(r=>r.json()).then(j=>{ if(j&&j.settings) applySettings(j.settings); }).catch(()=>{});
 (async()=>{ wireAuth(); if(await Auth.check()) enterApp(); })();
 window.addEventListener('resize',()=>{ if(!$('#mapModal').hidden) vFit(); });

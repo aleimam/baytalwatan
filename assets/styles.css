@@ -119,6 +119,9 @@ table.data tbody tr:hover{background:var(--card2)}
 /* ====== account gate ====== */
 .auth-gate{position:fixed;inset:0;z-index:200;background:linear-gradient(135deg,#061e48,#0b2c63);display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
 .auth-card{background:var(--card);border-radius:18px;box-shadow:0 22px 60px rgba(0,0,0,.45);width:min(420px,100%);padding:26px;border-top:4px solid var(--gold)}
+.auth-lang{display:flex;gap:3px;width:fit-content;margin:0 auto 14px;background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:3px}
+.auth-lang button{background:transparent;border:none;padding:6px 14px;border-radius:7px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;transition:background .15s}
+.auth-lang button.on{background:var(--navy);color:#fff}
 .auth-brand{text-align:center;margin-bottom:18px}
 .logo-badge.big{width:64px;height:64px;border-radius:16px;margin:0 auto 10px;padding:6px}
 .auth-brand h2{font-family:'Noto Kufi Arabic','Noto Sans Arabic',sans-serif;font-size:24px;color:var(--navy);font-weight:800}

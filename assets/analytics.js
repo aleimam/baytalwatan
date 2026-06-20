@@ -2,7 +2,7 @@
 const Analytics = (() => {
   const charts = {};
   let DATA = [], CITY_COLOR = {}, cityOrder = [], metric = 'count';
-  const PALETTE = ['#22d3ee','#f5b53d','#34d399','#60a5fa','#f472b6','#a78bfa','#2dd4bf','#fb923c','#e879f9','#38bdf8'];
+  const PALETTE = ['#061e48','#307e30','#cca248','#3b6fb0','#7b6cc4','#2a9d8f','#d08a3c','#9c4f6e','#5b9be0','#a0883f'];
   const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
   const fmt = n => (n==null||isNaN(n))?'—':Math.round(Number(n)).toLocaleString('en-US');
   const compact = n => { n=Number(n); const a=Math.abs(n); if(a>=1e9)return (n/1e9).toFixed(2)+'B'; if(a>=1e6)return (n/1e6).toFixed(1)+'M'; if(a>=1e3)return (n/1e3).toFixed(0)+'K'; return Math.round(n).toString(); };
@@ -53,7 +53,7 @@ const Analytics = (() => {
     mk('cPrem').setOption({grid:Object.assign({},grid,{right:42}),tooltip:tip({trigger:'axis',axisPointer:{type:'shadow'},formatter:p=>`${p[0].name}: <b>${fmt(p[0].value)}</b>`}),
       xAxis:{type:'value',axisLabel:{color:axc(),formatter:compact},splitLine:{lineStyle:{color:css('--line2')}}},
       yAxis:{type:'category',data:['ناصية','حدائق','بحر/نيل','بدون'],axisLabel:{color:txc()},axisLine:{lineStyle:{color:css('--line')}}},
-      series:[{type:'bar',barMaxWidth:24,label:{show:true,position:'right',color:txc(),fontSize:11,formatter:p=>fmt(p.value)},data:[{value:cor,itemStyle:{color:'#f5b53d',borderRadius:[0,6,6,0]}},{value:gar,itemStyle:{color:'#34d399',borderRadius:[0,6,6,0]}},{value:sea,itemStyle:{color:'#60a5fa',borderRadius:[0,6,6,0]}},{value:none,itemStyle:{color:'#6c7ea6',borderRadius:[0,6,6,0]}}]}]},true);
+      series:[{type:'bar',barMaxWidth:24,label:{show:true,position:'right',color:txc(),fontSize:11,formatter:p=>fmt(p.value)},data:[{value:cor,itemStyle:{color:'#cca248',borderRadius:[0,6,6,0]}},{value:gar,itemStyle:{color:'#307e30',borderRadius:[0,6,6,0]}},{value:sea,itemStyle:{color:'#3b6fb0',borderRadius:[0,6,6,0]}},{value:none,itemStyle:{color:'#9aa6bb',borderRadius:[0,6,6,0]}}]}]},true);
   }
   function scatter(){
     const cities=[...new Set(DATA.map(r=>r.city))];
@@ -78,9 +78,9 @@ const Analytics = (() => {
     mk('cBox').setOption({grid:Object.assign({},grid,{right:16,bottom:52}),tooltip:tip({trigger:'item',formatter:p=>Array.isArray(p.data)?`<b>${p.name}</b><br>أدنى ${fmt(p.data[1])} · وسيط <b>${fmt(p.data[3])}</b> · أعلى ${fmt(p.data[5])}`:''}),
       xAxis:{type:'category',data:rows.map(o=>o.ct),axisLabel:{color:axc(),rotate:42,fontSize:10},axisLine:{lineStyle:{color:css('--line')}}},
       yAxis:{type:'value',axisLabel:{color:axc(),formatter:compact},splitLine:{lineStyle:{color:css('--line2')}}},
-      series:[{type:'boxplot',data:rows.map(o=>[Math.min(...o.v),quantile(o.v,.25),quantile(o.v,.5),quantile(o.v,.75),Math.max(...o.v)]),itemStyle:{color:'#22d3ee22',borderColor:'#22d3ee'},boxWidth:[8,26]}]},true);
+      series:[{type:'boxplot',data:rows.map(o=>[Math.min(...o.v),quantile(o.v,.25),quantile(o.v,.5),quantile(o.v,.75),Math.max(...o.v)]),itemStyle:{color:'rgba(204,162,72,.14)',borderColor:'#cca248'},boxWidth:[8,26]}]},true);
   }
-  function renderAll(){ colors(); kpis(); byCity(); seg(); tree(); prem(); scatter(); hist('cHistP',DATA.map(r=>r.total_per_m),'#f472b6'); box(); hist('cHistA',DATA.map(r=>r.area),'#fb923c'); }
+  function renderAll(){ colors(); kpis(); byCity(); seg(); tree(); prem(); scatter(); hist('cHistP',DATA.map(r=>r.total_per_m),'#0b2c63'); box(); hist('cHistA',DATA.map(r=>r.area),'#307e30'); }
 
   document.getElementById('cityMetric').querySelectorAll('button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#cityMetric button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); metric=b.dataset.m; if(DATA.length) byCity(); });
   window.addEventListener('resize',()=>Object.values(charts).forEach(c=>c.resize()));

@@ -196,7 +196,7 @@ async function showView(v){
   if(v==='analytics'){ const rows=await Lands.all(params(true)); $('#anFilterHint').innerHTML=`التحليلات محسوبة على <b>${fmt(rows.length)}</b> قطعة ضمن التصفية الحالية.`; Analytics.render(rows); analyticsLoaded=true; }
 }
 $$('.tab').forEach(t=>t.onclick=()=>showView(t.dataset.view));
-$('#themeBtn').onclick=()=>{ document.body.classList.toggle('light'); $('#themeBtn').textContent=document.body.classList.contains('light')?'🌙':'☀️'; if(!$('#view-analytics').hidden && analyticsLoaded) Lands.all(params(true)).then(r=>Analytics.render(r,true)); };
+$('#themeBtn').onclick=()=>{ document.body.classList.toggle('dark'); $('#themeBtn').textContent=document.body.classList.contains('dark')?'☀️':'🌙'; if(!$('#view-analytics').hidden && analyticsLoaded) Lands.all(params(true)).then(r=>Analytics.render(r,true)); };
 
 function renderFooter(){
   $('#foot').innerHTML=`<b>المصدر:</b> بوابة هيئة المجتمعات العمرانية الجديدة — «المرحلة الحادية عشر» · <b>اللقطة:</b> ٢٠٢٦/٠٦/٢٠ (تتغيّر القطع مع إتمام الحجوزات) · <b>القيم المالية:</b> كما هي منشورة بالبوابة · <b>التغطية:</b> ${fmt(META.totals.cities)} مدينة · ${fmt(META.totals.zones)} منطقة · ${fmt(META.totals.plots)} قطعة · وضع البيانات: <b>${Lands.useApi?'قاعدة بيانات (PHP)':'محلي'}</b>`;

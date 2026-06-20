@@ -11,38 +11,7 @@
 <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
-<!-- ============ REGISTRATION / LOGIN GATE ============ -->
-<div id="authGate" class="auth-gate">
-  <div class="auth-card">
-    <div class="auth-lang" id="authLang">
-      <button type="button" data-setlang="ar">العربية</button>
-      <button type="button" data-setlang="en">English</button>
-    </div>
-    <div class="auth-brand">
-      <span class="logo-badge big"><img src="assets/icon.png" alt="بيت الوطن"></span>
-      <h2>بيت الوطن</h2>
-      <p data-i18n="g_tagline"></p>
-    </div>
-    <div class="auth-tabs">
-      <button class="auth-tab on" data-form="login" type="button" data-i18n="g_login"></button>
-      <button class="auth-tab" data-form="register" type="button" data-i18n="g_register"></button>
-    </div>
-    <form id="loginForm" class="auth-form">
-      <label><span data-i18n="g_email"></span><input type="email" name="email" autocomplete="email" required></label>
-      <label><span data-i18n="g_password"></span><input type="password" name="password" autocomplete="current-password" required></label>
-      <div class="auth-err" id="loginErr"></div>
-      <button type="submit" class="auth-submit" data-i18n="g_login_btn"></button>
-    </form>
-    <form id="registerForm" class="auth-form" hidden>
-      <label><span data-i18n="g_name"></span><input type="text" name="full_name" autocomplete="name" required></label>
-      <label><span data-i18n="g_email"></span><input type="email" name="email" autocomplete="email" required></label>
-      <label><span data-i18n="g_phone"></span><input type="tel" name="phone" autocomplete="tel" placeholder="01xxxxxxxxx" required></label>
-      <label><span data-i18n="g_password"></span><input type="password" name="password" autocomplete="new-password" minlength="6" required></label>
-      <div class="auth-err" id="registerErr"></div>
-      <button type="submit" class="auth-submit" data-i18n="g_register_btn"></button>
-    </form>
-  </div>
-</div>
+<!-- portal is open to everyone — login / registration disabled -->
 
 <header class="appbar">
   <div class="wrap bar">

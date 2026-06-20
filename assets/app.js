@@ -292,6 +292,5 @@ function wireAuth(){
   const lb=$('#logoutBtn'); if(lb) lb.onclick=()=>Auth.logout();
 }
 applyLang();
-fetch('admin.php?action=settings_get').then(r=>r.json()).then(j=>{ if(j&&j.settings) applySettings(j.settings); }).catch(()=>{});
-(async()=>{ wireAuth(); if(await Auth.check()) enterApp(); })();
+enterApp();   // login / registration disabled — portal is open to everyone
 window.addEventListener('resize',()=>{ if(!$('#mapModal').hidden) vFit(); });

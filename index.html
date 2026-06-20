@@ -64,37 +64,42 @@
 </header>
 
 <!-- ============ LIST + MAP VIEW ============ -->
-<main id="view-list" class="wrap view">
-  <section class="filters card">
-    <div class="frow">
-      <div class="fg city-dd">
-        <label data-i18n="f_city"></label>
-        <button type="button" class="dd-btn" id="cityBtn"><span id="cityBtnTxt"></span><span>▾</span></button>
-        <div class="dd-panel" id="cityPanel">
-          <div class="dd-actions"><a id="cityAll" data-i18n="sel_all"></a><a id="cityNone" data-i18n="sel_none"></a></div>
-          <div id="cityList"></div>
-        </div>
+<!-- ============ GLOBAL FILTER BAR (applies to every view) ============ -->
+<div class="wrap"><section class="filters card" id="filterBar">
+  <div class="frow">
+    <div class="fg city-dd">
+      <label data-i18n="f_city"></label>
+      <button type="button" class="dd-btn" id="cityBtn"><span id="cityBtnTxt"></span><span>▾</span></button>
+      <div class="dd-panel" id="cityPanel">
+        <div class="dd-actions"><a id="cityAll" data-i18n="sel_all"></a><a id="cityNone" data-i18n="sel_none"></a></div>
+        <div id="cityList"></div>
       </div>
-      <div class="fg"><label data-i18n="f_perm"></label><div class="mm"><input type="number" id="pMin" data-i18n-ph="from"><span>–</span><input type="number" id="pMax" data-i18n-ph="to"></div></div>
-      <div class="fg"><label data-i18n="f_area"></label><div class="mm"><input type="number" id="aMin" data-i18n-ph="from"><span>–</span><input type="number" id="aMax" data-i18n-ph="to"></div></div>
-      <div class="fg"><label data-i18n="f_total"></label><div class="mm"><input type="number" id="tMin" data-i18n-ph="from"><span>–</span><input type="number" id="tMax" data-i18n-ph="to"></div></div>
-      <div class="fg"><label data-i18n="f_down"></label><div class="mm"><input type="number" id="dMin" data-i18n-ph="from"><span>–</span><input type="number" id="dMax" data-i18n-ph="to"></div></div>
-      <div class="fg"><label data-i18n="f_premium"></label>
-        <select id="premSel"><option value="" data-i18n="p_all"></option><option value="any" data-i18n="p_any"></option><option value="none" data-i18n="p_none"></option><option value="corner" data-i18n="p_corner"></option><option value="garden" data-i18n="p_garden"></option><option value="sea" data-i18n="p_sea"></option></select>
-      </div>
-      <div class="fg grow"><label data-i18n="f_search"></label><input type="text" id="searchBox" data-i18n-ph="search_ph"></div>
-      <div class="fg"><label>&nbsp;</label><button class="btn" id="resetBtn" data-i18n="reset"></button></div>
     </div>
-    <div class="frow sub-row">
-      <span class="count-pill" id="countPill">…</span>
-      <span class="spacer"></span>
+    <div class="fg"><label data-i18n="f_perm"></label><div class="mm"><input type="number" id="pMin" data-i18n-ph="from"><span>–</span><input type="number" id="pMax" data-i18n-ph="to"></div></div>
+    <div class="fg"><label data-i18n="f_area"></label><div class="mm"><input type="number" id="aMin" data-i18n-ph="from"><span>–</span><input type="number" id="aMax" data-i18n-ph="to"></div></div>
+    <div class="fg"><label data-i18n="f_total"></label><div class="mm"><input type="number" id="tMin" data-i18n-ph="from"><span>–</span><input type="number" id="tMax" data-i18n-ph="to"></div></div>
+    <div class="fg"><label data-i18n="f_down"></label><div class="mm"><input type="number" id="dMin" data-i18n-ph="from"><span>–</span><input type="number" id="dMax" data-i18n-ph="to"></div></div>
+    <div class="fg"><label data-i18n="f_premium"></label>
+      <select id="premSel"><option value="" data-i18n="p_all"></option><option value="any" data-i18n="p_any"></option><option value="none" data-i18n="p_none"></option><option value="corner" data-i18n="p_corner"></option><option value="garden" data-i18n="p_garden"></option><option value="sea" data-i18n="p_sea"></option></select>
+    </div>
+    <div class="fg grow"><label data-i18n="f_search"></label><input type="text" id="searchBox" data-i18n-ph="search_ph"></div>
+    <div class="fg"><label>&nbsp;</label><button class="btn" id="resetBtn" data-i18n="reset"></button></div>
+  </div>
+  <div class="frow sub-row">
+    <span class="count-pill" id="countPill">…</span>
+    <span class="chips" id="filterChips"></span>
+    <span class="spacer"></span>
+    <span class="list-only inline-controls">
       <label class="inline"><span data-i18n="sort_by"></span> <select id="sortSel"></select></label>
       <button class="btn ghost" id="dirBtn"></button>
       <label class="inline"><span data-i18n="per_page"></span> <select id="perSel"><option>25</option><option selected>50</option><option>100</option><option>200</option></select></label>
-      <button class="btn" id="exportBtn" data-i18n="export_csv"></button>
-    </div>
-  </section>
+    </span>
+    <button class="btn" id="exportBtn" data-i18n="export_csv"></button>
+  </div>
+</section></div>
 
+<!-- ============ LIST + MAP VIEW ============ -->
+<main id="view-list" class="wrap view">
   <section class="card tablecard">
     <div class="tbl-wrap"><table class="data" id="tbl"><thead></thead><tbody></tbody></table></div>
     <div class="pager" id="pager"></div>
@@ -106,9 +111,11 @@
   <div class="hint" id="anFilterHint"></div>
   <section class="kpis" id="kpis"></section>
   <div class="agrid">
-    <div class="card a8"><div class="ch-head"><h3 data-i18n="c_bycity"></h3>
-      <div class="seg" id="cityMetric"><button class="on" data-m="count" data-i18n="m_count"></button><button data-m="value" data-i18n="m_value"></button><button data-m="area" data-i18n="m_area"></button><button data-m="avgM" data-i18n="m_avgm"></button></div></div>
-      <div class="chart tall" id="cByCity"></div></div>
+    <div class="card a8"><div class="ch-head"><h3 data-i18n="c_breakdown"></h3>
+      <label class="inline"><span data-i18n="breakdown_by"></span> <select id="bdDim"></select></label>
+      <div class="seg" id="cityMetric"><button class="on" data-m="count" data-i18n="m_count"></button><button data-m="value" data-i18n="m_value"></button><button data-m="area" data-i18n="m_area"></button><button data-m="avgM" data-i18n="m_avgm"></button><button data-m="avgDown" data-i18n="m_avgdown"></button></div></div>
+      <div class="chart tall" id="cByCity"></div>
+      <div class="bd-hint">↳ <span data-i18n="click_to_filter"></span></div></div>
     <div class="card a4"><h3 data-i18n="c_segments"></h3><div class="chart tall" id="cSeg"></div></div>
     <div class="card a7"><h3 data-i18n="c_tree"></h3><div class="chart tall" id="cTree"></div></div>
     <div class="card a5"><h3 data-i18n="c_prem"></h3><div class="chart tall" id="cPrem"></div></div>
@@ -116,6 +123,7 @@
     <div class="card a5"><h3 data-i18n="c_histp"></h3><div class="chart" id="cHistP"></div></div>
     <div class="card a7"><h3 data-i18n="c_box"></h3><div class="chart tall" id="cBox"></div></div>
     <div class="card a5"><h3 data-i18n="c_hista"></h3><div class="chart" id="cHistA"></div></div>
+    <div class="card a12"><div class="ch-head"><h3 data-i18n="bd_table"></h3><span class="bd-sub" id="bdTableSub"></span></div><div class="tbl-wrap" id="bdTable"></div></div>
   </div>
 </main>
 

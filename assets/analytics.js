@@ -32,16 +32,44 @@ const Analytics = (() => {
       [t('k_area'),compact(area)+' م²',fmt(area)],[t('k_value'),compact(val),''],[t('k_avgperm'),area?fmt(val/area):'—',t('k_weighted')],
       [t('k_avgarea'),d.length?fmt(area/d.length)+' م²':'—',''],[t('k_down'),compact(down),fmt(d.filter(r=>r.has_premium).length)+' '+t('k_premiumed')]]);
   }
-  function byCity(){
-    const m=metric, by={}; DATA.forEach(r=>{ (by[r.city]=by[r.city]||{n:0,v:0,a:0}); by[r.city].n++; by[r.city].v+=r.total_price; by[r.city].a+=r.area; });
-    let arr=Object.entries(by).map(([c,o])=>({c,count:o.n,value:o.v,area:o.a,avgM:o.a?o.v/o.a:0}));
-    const key=m==='count'?'count':m==='value'?'value':m==='area'?'area':'avgM';
-    arr.sort((a,b)=>a[key]-b[key]); const names=arr.map(a=>a.c);
-    mk('cByCity').setOption({grid:Object.assign({},grid,{right:62}),
-      tooltip:tip({trigger:'axis',axisPointer:{type:'shadow'},formatter:p=>{const a=arr[p[0].dataIndex];return `<b>${a.c}</b><br>${t('m_count')}: <b>${fmt(a.count)}</b><br>${t('m_value')}: <b>${fmt(a.value)}</b><br>${t('m_area')}: <b>${fmt(a.area)}</b><br>${t('m_avgm')}: <b>${fmt(a.avgM)}</b>`;}}),
-      xAxis:{type:'value',axisLabel:{color:axc(),formatter:compact},splitLine:{lineStyle:{color:css('--line2')}}},
-      yAxis:{type:'category',data:names,axisLabel:{color:txc(),fontSize:11},axisLine:{lineStyle:{color:css('--line')}}},
-      series:[{type:'bar',barMaxWidth:20,data:arr.map(a=>({value:a[key],itemStyle:{color:CITY_COLOR[a.c],borderRadius:[0,6,6,0]}})),label:{show:true,position:'right',color:txc(),fontSize:10,formatter:p=>compact(p.value)}}]},true);
+  /* ---- flexible breakdown by any dimension (clickable to filter) ---- */
+  let bdDim='city';
+  const DIMS=[['city','dim_city'],['block','dim_block'],['project','dim_project'],['premium','dim_premium'],['price','dim_priceband'],['total','dim_totalband'],['area','dim_areaband'],['down','dim_downband']];
+  const BANDS={ price:[['<150',0,150],['150–250',150,250],['250–400',250,400],['400–550',400,550],['≥550',550,1e9]],
+    total:[['<150K',0,15e4],['150–300K',15e4,3e5],['300–500K',3e5,5e5],['500K–1M',5e5,1e6],['≥1M',1e6,1e12]],
+    area:[['<300',0,300],['300–500',300,500],['500–750',500,750],['750–1000',750,1000],['≥1000',1000,1e7]],
+    down:[['<25K',0,25e3],['25–50K',25e3,5e4],['50–100K',5e4,1e5],['100–200K',1e5,2e5],['≥200K',2e5,1e9]] };
+  const ORDERED=['price','total','area','down','premium'];
+  function bandOf(v,b){ for(const x of b) if(v>=x[1]&&v<x[2]) return x[0]; return b[b.length-1][0]; }
+  function gkey(r,d){ switch(d){ case 'block':return r.block; case 'project':return r.project.replace('المرحلة الحادية عشر - ','').replace(/ - .*$/,''); case 'premium':return String(r.premCount); case 'price':return bandOf(r.total_per_m,BANDS.price); case 'total':return bandOf(r.total_price,BANDS.total); case 'area':return bandOf(r.area,BANDS.area); case 'down':return bandOf(r.down_payment,BANDS.down); default:return r.city; } }
+  function groupData(rows,d){ const map={}; rows.forEach(r=>{ const k=gkey(r,d); (map[k]=map[k]||{key:k,count:0,value:0,area:0,down:0}); const o=map[k]; o.count++; o.value+=r.total_price; o.area+=r.area; o.down+=r.down_payment; }); const arr=Object.values(map); if(BANDS[d]) arr.forEach(o=>{ const b=BANDS[d].find(x=>x[0]===o.key); if(b)o.range=[b[1],b[2]]; }); return arr; }
+  function mval(o,m){ return m==='count'?o.count : m==='value'?o.value : m==='area'?o.area : m==='avgDown'?(o.count?o.down/o.count:0) : (o.area?o.value/o.area:0); }
+  function bandIdx(d,k){ const b=BANDS[d]; return b?b.findIndex(x=>x[0]===k):0; }
+  function breakdown(){
+    const m=metric; let arr=groupData(DATA,bdDim);
+    const ordered=ORDERED.includes(bdDim);
+    if(ordered) arr.sort((a,b)=> bdDim==='premium' ? (+a.key)-(+b.key) : bandIdx(bdDim,a.key)-bandIdx(bdDim,b.key));
+    else arr.sort((a,b)=>mval(a,m)-mval(b,m));
+    let show=arr; if(!ordered && arr.length>22) show=arr.slice(arr.length-22);
+    const names=show.map(o=>bdDim==='premium'?(o.key+' '+t('types_n')):o.key);
+    const colorOf=(o,i)=>bdDim==='city'?CITY_COLOR[o.key]:PALETTE[i%PALETTE.length];
+    const horiz=!ordered;
+    const opt={grid:Object.assign({},grid,horiz?{right:64,left:8}:{bottom:8}),
+      tooltip:tip({trigger:'axis',axisPointer:{type:'shadow'},formatter:p=>{const o=show[p[0].dataIndex];return `<b>${names[p[0].dataIndex]}</b><br>${t('m_count')}: <b>${fmt(o.count)}</b><br>${t('k_value')}: <b>${fmt(o.value)}</b><br>${t('m_avgm')}: <b>${fmt(o.area?o.value/o.area:0)}</b><br>${t('m_avgdown')}: <b>${fmt(o.count?o.down/o.count:0)}</b>`;}}),
+      series:[{type:'bar',barMaxWidth:horiz?18:36,cursor:'pointer',data:show.map((o,i)=>({value:mval(o,m),itemStyle:{color:colorOf(o,i),borderRadius:horiz?[0,6,6,0]:[6,6,0,0]}})),label:{show:true,position:horiz?'right':'top',color:txc(),fontSize:10,formatter:p=>compact(p.value)}}]};
+    if(horiz){ opt.xAxis={type:'value',axisLabel:{color:axc(),formatter:compact},splitLine:{lineStyle:{color:css('--line2')}}}; opt.yAxis={type:'category',data:names,axisLabel:{color:txc(),fontSize:11},axisLine:{lineStyle:{color:css('--line')}}}; }
+    else { opt.xAxis={type:'category',data:names,axisLabel:{color:axc(),fontSize:11,interval:0},axisLine:{lineStyle:{color:css('--line')}}}; opt.yAxis={type:'value',axisLabel:{color:axc(),formatter:compact},splitLine:{lineStyle:{color:css('--line2')}}}; }
+    const c=mk('cByCity'); c.setOption(opt,true);
+    c.off('click'); c.on('click',p=>{ const o=show[p.dataIndex]; if(o && window.onDrill) window.onDrill(bdDim,o.key,o.range); });
+    renderBdTable(arr);
+  }
+  function renderBdTable(groups){
+    const m=metric, rows=groups.slice().sort((a,b)=>mval(b,m)-mval(a,m));
+    const lbl=k=>bdDim==='premium'?(k+' '+t('types_n')):k;
+    const head=`<th>${t('bd_group')}</th><th>${t('m_count')}</th><th>${t('k_value')}</th><th>${t('m_area')}</th><th>${t('bd_avgperm')}</th><th>${t('bd_avgdown')}</th>`;
+    const body=rows.map(o=>`<tr><td class="c-muted">${lbl(o.key)}</td><td class="num">${fmt(o.count)}</td><td class="num">${fmt(o.value)}</td><td class="num">${fmt(o.area)}</td><td class="num">${fmt(o.area?o.value/o.area:0)}</td><td class="num">${fmt(o.count?o.down/o.count:0)}</td></tr>`).join('');
+    const el=document.getElementById('bdTable'); if(el) el.innerHTML=`<table class="data adtbl"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+    const sub=document.getElementById('bdTableSub'); if(sub){ const d=DIMS.find(x=>x[0]===bdDim); sub.textContent=(d?t(d[1]):'')+' · '+rows.length; }
   }
   function seg(){
     const S=[['< 150K',0,15e4],['150K–300K',15e4,3e5],['300K–500K',3e5,5e5],['500K–1M',5e5,1e6],['≥ 1M',1e6,Infinity]];
@@ -88,7 +116,7 @@ const Analytics = (() => {
       yAxis:{type:'value',axisLabel:{color:axc(),formatter:compact},splitLine:{lineStyle:{color:css('--line2')}}},
       series:[{type:'boxplot',data:rows.map(o=>[Math.min(...o.v),quantile(o.v,.25),quantile(o.v,.5),quantile(o.v,.75),Math.max(...o.v)]),itemStyle:{color:'rgba(204,162,72,.14)',borderColor:'#cca248'},boxWidth:[8,26]}]},true);
   }
-  function renderAll(){ colors(); kpis(); byCity(); seg(); tree(); prem(); scatter(); hist('cHistP',DATA.map(r=>r.total_per_m),'#0b2c63'); box(); hist('cHistA',DATA.map(r=>r.area),'#307e30'); }
+  function renderAll(){ colors(); kpis(); breakdown(); seg(); tree(); prem(); scatter(); hist('cHistP',DATA.map(r=>r.total_per_m),'#0b2c63'); box(); hist('cHistA',DATA.map(r=>r.area),'#307e30'); }
 
   /* ---- Premium Plots (القطع المتميزة) ---- */
   function doPremium(rows){
@@ -152,7 +180,8 @@ const Analytics = (() => {
     topListEl('dpTop', d.slice().sort((a,b)=>a.down_payment-b.down_payment).slice(0,10), false);
   }
 
-  document.getElementById('cityMetric').querySelectorAll('button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#cityMetric button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); metric=b.dataset.m; if(DATA.length) byCity(); });
+  document.getElementById('cityMetric').querySelectorAll('button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#cityMetric button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); metric=b.dataset.m; if(DATA.length) breakdown(); });
+  (function(){ const el=document.getElementById('bdDim'); if(el){ el.innerHTML=DIMS.map(([v,k])=>`<option value="${v}" data-i18n="${k}"></option>`).join(''); el.value=bdDim; el.onchange=()=>{ bdDim=el.value; if(DATA.length) breakdown(); }; } })();
   window.addEventListener('resize',()=>Object.values(charts).forEach(c=>c.resize()));
   function disposeAll(){ Object.values(charts).forEach(c=>c.dispose()); for(const k in charts) delete charts[k]; }
   return {

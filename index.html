@@ -17,27 +17,27 @@
     <div class="auth-brand">
       <span class="logo-badge big"><img src="assets/icon.png" alt="بيت الوطن"></span>
       <h2>بيت الوطن</h2>
-      <p>خدمات عقارية مجانية — سجّل للدخول إلى دليل الأراضي</p>
+      <p data-i18n="g_tagline"></p>
     </div>
     <div class="auth-tabs">
-      <button class="auth-tab on" data-form="login" type="button">تسجيل الدخول</button>
-      <button class="auth-tab" data-form="register" type="button">إنشاء حساب</button>
+      <button class="auth-tab on" data-form="login" type="button" data-i18n="g_login"></button>
+      <button class="auth-tab" data-form="register" type="button" data-i18n="g_register"></button>
     </div>
     <form id="loginForm" class="auth-form">
-      <label>البريد الإلكتروني<input type="email" name="email" autocomplete="email" required></label>
-      <label>كلمة المرور<input type="password" name="password" autocomplete="current-password" required></label>
+      <label data-i18n="g_email"><input type="email" name="email" autocomplete="email" required></label>
+      <label data-i18n="g_password"><input type="password" name="password" autocomplete="current-password" required></label>
       <div class="auth-err" id="loginErr"></div>
-      <button type="submit" class="auth-submit">دخول</button>
+      <button type="submit" class="auth-submit" data-i18n="g_login_btn"></button>
     </form>
     <form id="registerForm" class="auth-form" hidden>
-      <label>الاسم بالكامل<input type="text" name="full_name" autocomplete="name" required></label>
-      <label>البريد الإلكتروني<input type="email" name="email" autocomplete="email" required></label>
-      <label>رقم الهاتف<input type="tel" name="phone" autocomplete="tel" placeholder="01xxxxxxxxx" required></label>
-      <label>كلمة المرور<input type="password" name="password" autocomplete="new-password" minlength="6" required></label>
+      <label data-i18n="g_name"><input type="text" name="full_name" autocomplete="name" required></label>
+      <label data-i18n="g_email"><input type="email" name="email" autocomplete="email" required></label>
+      <label data-i18n="g_phone"><input type="tel" name="phone" autocomplete="tel" placeholder="01xxxxxxxxx" required></label>
+      <label data-i18n="g_password"><input type="password" name="password" autocomplete="new-password" minlength="6" required></label>
       <div class="auth-err" id="registerErr"></div>
-      <button type="submit" class="auth-submit">إنشاء حساب ودخول</button>
+      <button type="submit" class="auth-submit" data-i18n="g_register_btn"></button>
     </form>
-    <div class="auth-note">بإنشائك حساباً فإنك توافق على استخدام بياناتك للتواصل بخصوص خدمات الأراضي.</div>
+    <div class="auth-note" data-i18n="g_note"></div>
   </div>
 </div>
 
@@ -46,15 +46,19 @@
     <div class="brand">
       <span class="logo-badge"><img src="assets/icon.png" alt="شعار بيت الوطن"></span>
       <div>
-        <h1>بيت الوطن</h1>
-        <div class="sub">خدمات عقارية مجانية · دليل أراضي المرحلة الحادية عشر</div>
+        <h1 id="siteTitle">بيت الوطن</h1>
+        <div class="sub" id="siteSub" data-i18n="brand_sub"></div>
       </div>
     </div>
     <nav class="tabs">
-      <button class="tab on" data-view="list">القائمة والخرائط</button>
-      <button class="tab" data-view="analytics">لوحة التحليلات</button>
-      <span class="user-area" id="userArea" hidden><span class="user-name" id="userName"></span><button class="btn ghost" id="logoutBtn" title="تسجيل الخروج">خروج ⏻</button></span>
-      <button class="btn ghost" id="themeBtn" title="تبديل السمة">🌙</button>
+      <button class="tab on" data-view="list" data-i18n="tab_list"></button>
+      <button class="tab" data-view="analytics" data-i18n="tab_analytics"></button>
+      <button class="tab" data-view="premium" data-i18n="tab_premium"></button>
+      <button class="tab" data-view="down" data-i18n="tab_down"></button>
+      <button class="tab admin-only" data-view="admin" data-i18n="tab_admin" hidden></button>
+      <span class="user-area" id="userArea" hidden><span class="user-name" id="userName"></span><button class="btn ghost" id="logoutBtn" data-i18n="logout"></button></span>
+      <button class="btn ghost" id="langBtn" title="Language / اللغة">EN</button>
+      <button class="btn ghost" id="themeBtn" data-i18n-title="theme">🌙</button>
     </nav>
   </div>
 </header>
@@ -64,41 +68,35 @@
   <section class="filters card">
     <div class="frow">
       <div class="fg city-dd">
-        <label>المدينة</label>
-        <button type="button" class="dd-btn" id="cityBtn"><span id="cityBtnTxt">كل المدن</span><span>▾</span></button>
+        <label data-i18n="f_city"></label>
+        <button type="button" class="dd-btn" id="cityBtn"><span id="cityBtnTxt"></span><span>▾</span></button>
         <div class="dd-panel" id="cityPanel">
-          <div class="dd-actions"><a id="cityAll">الكل</a><a id="cityNone">لا شيء</a></div>
+          <div class="dd-actions"><a id="cityAll" data-i18n="sel_all"></a><a id="cityNone" data-i18n="sel_none"></a></div>
           <div id="cityList"></div>
         </div>
       </div>
-      <div class="fg"><label>سعر المتر الإجمالي</label><div class="mm"><input type="number" id="pMin" placeholder="من"><span>–</span><input type="number" id="pMax" placeholder="إلى"></div></div>
-      <div class="fg"><label>المساحة (م²)</label><div class="mm"><input type="number" id="aMin" placeholder="من"><span>–</span><input type="number" id="aMax" placeholder="إلى"></div></div>
-      <div class="fg"><label>السعر الإجمالي</label><div class="mm"><input type="number" id="tMin" placeholder="من"><span>–</span><input type="number" id="tMax" placeholder="إلى"></div></div>
-      <div class="fg"><label>الدفعة المقدمة</label><div class="mm"><input type="number" id="dMin" placeholder="من"><span>–</span><input type="number" id="dMax" placeholder="إلى"></div></div>
-      <div class="fg"><label>التميّز</label>
-        <select id="premSel"><option value="">الكل</option><option value="any">أي تميّز</option><option value="none">بدون</option><option value="corner">ناصية</option><option value="garden">حدائق</option><option value="sea">بحر / نيل</option></select>
+      <div class="fg"><label data-i18n="f_perm"></label><div class="mm"><input type="number" id="pMin" data-i18n-ph="from"><span>–</span><input type="number" id="pMax" data-i18n-ph="to"></div></div>
+      <div class="fg"><label data-i18n="f_area"></label><div class="mm"><input type="number" id="aMin" data-i18n-ph="from"><span>–</span><input type="number" id="aMax" data-i18n-ph="to"></div></div>
+      <div class="fg"><label data-i18n="f_total"></label><div class="mm"><input type="number" id="tMin" data-i18n-ph="from"><span>–</span><input type="number" id="tMax" data-i18n-ph="to"></div></div>
+      <div class="fg"><label data-i18n="f_down"></label><div class="mm"><input type="number" id="dMin" data-i18n-ph="from"><span>–</span><input type="number" id="dMax" data-i18n-ph="to"></div></div>
+      <div class="fg"><label data-i18n="f_premium"></label>
+        <select id="premSel"><option value="" data-i18n="p_all"></option><option value="any" data-i18n="p_any"></option><option value="none" data-i18n="p_none"></option><option value="corner" data-i18n="p_corner"></option><option value="garden" data-i18n="p_garden"></option><option value="sea" data-i18n="p_sea"></option></select>
       </div>
-      <div class="fg grow"><label>بحث (رقم القطعة / الحي / المربع)</label><input type="text" id="searchBox" placeholder="اكتب للبحث…"></div>
-      <div class="fg"><label>&nbsp;</label><button class="btn" id="resetBtn">إعادة ضبط</button></div>
+      <div class="fg grow"><label data-i18n="f_search"></label><input type="text" id="searchBox" data-i18n-ph="search_ph"></div>
+      <div class="fg"><label>&nbsp;</label><button class="btn" id="resetBtn" data-i18n="reset"></button></div>
     </div>
     <div class="frow sub-row">
       <span class="count-pill" id="countPill">…</span>
       <span class="spacer"></span>
-      <label class="inline">ترتيب حسب
-        <select id="sortSel"></select>
-      </label>
-      <button class="btn ghost" id="dirBtn" title="اتجاه الترتيب">▼ تنازلي</button>
-      <label class="inline">لكل صفحة
-        <select id="perSel"><option>25</option><option selected>50</option><option>100</option><option>200</option></select>
-      </label>
-      <button class="btn" id="exportBtn">⤓ تصدير CSV</button>
+      <label class="inline"><span data-i18n="sort_by"></span> <select id="sortSel"></select></label>
+      <button class="btn ghost" id="dirBtn"></button>
+      <label class="inline"><span data-i18n="per_page"></span> <select id="perSel"><option>25</option><option selected>50</option><option>100</option><option>200</option></select></label>
+      <button class="btn" id="exportBtn" data-i18n="export_csv"></button>
     </div>
   </section>
 
   <section class="card tablecard">
-    <div class="tbl-wrap">
-      <table class="data" id="tbl"><thead></thead><tbody></tbody></table>
-    </div>
+    <div class="tbl-wrap"><table class="data" id="tbl"><thead></thead><tbody></tbody></table></div>
     <div class="pager" id="pager"></div>
   </section>
 </main>
@@ -108,17 +106,54 @@
   <div class="hint" id="anFilterHint"></div>
   <section class="kpis" id="kpis"></section>
   <div class="agrid">
-    <div class="card a8"><div class="ch-head"><h3>المؤشرات حسب المدينة</h3>
-      <div class="seg" id="cityMetric"><button class="on" data-m="count">عدد القطع</button><button data-m="value">القيمة</button><button data-m="area">المساحة</button><button data-m="avgM">متوسط م²</button></div></div>
+    <div class="card a8"><div class="ch-head"><h3 data-i18n="c_bycity"></h3>
+      <div class="seg" id="cityMetric"><button class="on" data-m="count" data-i18n="m_count"></button><button data-m="value" data-i18n="m_value"></button><button data-m="area" data-i18n="m_area"></button><button data-m="avgM" data-i18n="m_avgm"></button></div></div>
       <div class="chart tall" id="cByCity"></div></div>
-    <div class="card a4"><h3>شرائح السعر الإجمالي</h3><div class="chart tall" id="cSeg"></div></div>
-    <div class="card a7"><h3>خريطة قيمة المعروض (مدينة ← مشروع)</h3><div class="chart tall" id="cTree"></div></div>
-    <div class="card a5"><h3>تحليل ميزات القطع</h3><div class="chart tall" id="cPrem"></div></div>
-    <div class="card a7"><h3>المساحة مقابل السعر الإجمالي</h3><div class="chart tall" id="cScatter"></div></div>
-    <div class="card a5"><h3>توزيع سعر المتر الإجمالي</h3><div class="chart" id="cHistP"></div></div>
-    <div class="card a7"><h3>نطاق سعر المتر حسب المدينة</h3><div class="chart tall" id="cBox"></div></div>
-    <div class="card a5"><h3>توزيع مساحات القطع</h3><div class="chart" id="cHistA"></div></div>
+    <div class="card a4"><h3 data-i18n="c_segments"></h3><div class="chart tall" id="cSeg"></div></div>
+    <div class="card a7"><h3 data-i18n="c_tree"></h3><div class="chart tall" id="cTree"></div></div>
+    <div class="card a5"><h3 data-i18n="c_prem"></h3><div class="chart tall" id="cPrem"></div></div>
+    <div class="card a7"><h3 data-i18n="c_scatter"></h3><div class="chart tall" id="cScatter"></div></div>
+    <div class="card a5"><h3 data-i18n="c_histp"></h3><div class="chart" id="cHistP"></div></div>
+    <div class="card a7"><h3 data-i18n="c_box"></h3><div class="chart tall" id="cBox"></div></div>
+    <div class="card a5"><h3 data-i18n="c_hista"></h3><div class="chart" id="cHistA"></div></div>
   </div>
+</main>
+
+<!-- ============ PREMIUM PLOTS VIEW (القطع المتميزة) ============ -->
+<main id="view-premium" class="wrap view" hidden>
+  <div class="hint"><span id="prHint"></span> <span data-i18n="pr_intro"></span></div>
+  <section class="kpis" id="prKpis"></section>
+  <div class="agrid">
+    <div class="card a4"><h3 data-i18n="pr_c_bytype"></h3><div class="chart tall" id="prByType"></div></div>
+    <div class="card a8"><h3 data-i18n="pr_c_bycity"></h3><div class="chart tall" id="prByCity"></div></div>
+    <div class="card a5"><h3 data-i18n="pr_c_count"></h3><div class="chart" id="prCount"></div></div>
+    <div class="card a7"><h3 data-i18n="pr_c_uplift"></h3><div class="chart" id="prUplift"></div></div>
+    <div class="card a12"><h3 data-i18n="pr_top"></h3><div id="prTop"></div></div>
+  </div>
+</main>
+
+<!-- ============ DOWN PAYMENT VIEW (مقدم الحجز) ============ -->
+<main id="view-down" class="wrap view" hidden>
+  <div class="hint"><span id="dpHintN"></span> <span data-i18n="dp_intro"></span></div>
+  <section class="kpis" id="dpKpis"></section>
+  <div class="agrid">
+    <div class="card a7"><h3 data-i18n="dp_c_hist"></h3><div class="chart tall" id="dpHist"></div></div>
+    <div class="card a5"><h3 data-i18n="dp_c_brackets"></h3><div class="chart tall" id="dpBrackets"></div></div>
+    <div class="card a8"><h3 data-i18n="dp_c_bycity"></h3><div class="chart tall" id="dpByCity"></div></div>
+    <div class="card a4"><h3 data-i18n="dp_c_scatter"></h3><div class="chart tall" id="dpScatter"></div></div>
+    <div class="card a12"><h3 data-i18n="dp_top_low"></h3><div id="dpTop"></div></div>
+  </div>
+</main>
+
+<!-- ============ ADMIN VIEW (الإدارة) ============ -->
+<main id="view-admin" class="wrap view" hidden>
+  <h2 class="section-title" data-i18n="ad_title"></h2>
+  <div class="seg admin-seg" id="adminSeg" style="margin:6px 0 14px">
+    <button class="on" data-atab="users" data-i18n="ad_tab_users"></button>
+    <button data-atab="appear" data-i18n="ad_tab_appear"></button>
+    <button data-atab="features" data-i18n="ad_tab_features"></button>
+  </div>
+  <div id="adminBody"></div>
 </main>
 
 <!-- ============ MAP MODAL ============ -->
@@ -126,23 +161,17 @@
   <div class="modal-bg" data-close></div>
   <div class="modal-box">
     <div class="modal-head">
-      <div>
-        <h3 id="mTitle">—</h3>
-        <div class="msub" id="mSub">—</div>
-      </div>
+      <div><h3 id="mTitle">—</h3><div class="msub" id="mSub">—</div></div>
       <div class="mtools">
         <button class="btn ghost" id="mZoomOut">−</button>
         <button class="btn ghost" id="mZoomIn">+</button>
         <button class="btn ghost" id="mReset">⟲</button>
-        <a class="btn ghost" id="mOpen" target="_blank" title="فتح الخريطة كاملة">⤢</a>
-        <button class="btn" data-close>إغلاق ✕</button>
+        <a class="btn ghost" id="mOpen" target="_blank">⤢</a>
+        <button class="btn" data-close>✕</button>
       </div>
     </div>
     <div class="modal-body">
-      <div class="viewer" id="viewer">
-        <img id="mImg" alt="خريطة المنطقة" draggable="false">
-        <div class="viewer-hint" id="mHint"></div>
-      </div>
+      <div class="viewer" id="viewer"><img id="mImg" alt="map" draggable="false"><div class="viewer-hint" id="mHint"></div></div>
       <aside class="plot-info" id="plotInfo"></aside>
     </div>
   </div>
@@ -151,8 +180,10 @@
 <footer class="wrap foot" id="foot"></footer>
 
 <script src="assets/data.js"></script>
+<script src="assets/i18n.js"></script>
 <script src="assets/echarts.min.js"></script>
 <script src="assets/analytics.js"></script>
+<script src="assets/admin.js"></script>
 <script src="assets/app.js"></script>
 </body>
 </html>

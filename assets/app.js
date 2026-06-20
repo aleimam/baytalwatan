@@ -60,8 +60,8 @@ const Lands = {
 /* ---------- filter state ---------- */
 const F = {cities:new Set(), pMin:'',pMax:'',aMin:'',aMax:'',tMin:'',tMax:'',dMin:'',dMax:'',prem:'',q:'',sort:'total_price',dir:'desc',page:1,per:50};
 let META=null, ALL_CITIES=[], curRows=[];
-const SORTCOLS=[['total_price','السعر الإجمالي'],['total_per_m','سعر المتر الإجمالي'],['premium','التميّز (الأكثر مزايا أولاً)'],['area','المساحة'],['plot','رقم القطعة'],['city','المدينة'],['zone_id','المنطقة'],['base_per_m','سعر المتر الأساسى'],['down_payment','الدفعة المقدمة'],['corner','تميّز ناصية'],['garden','تميّز حدائق'],['sea','تميّز بحر/نيل']];
-const TCOLS=[['city','المدينة'],['block','المربع'],['plot','القطعة'],['area','المساحة م²'],['base_per_m','سعر المتر الأساسى'],['prem','التميّز'],['total_per_m','سعر المتر الإجمالي'],['total_price','السعر الإجمالي'],['down_payment','الدفعة المقدمة'],['map','الخريطة']];
+const SORTCOLS=[['total_price','s_total'],['total_per_m','s_perm'],['premium','s_premium'],['area','s_area'],['plot','s_plot'],['city','s_city'],['zone_id','s_zone'],['base_per_m','s_base'],['down_payment','s_down'],['corner','s_corner'],['garden','s_garden'],['sea','s_sea']];
+const TCOLS=[['city','t_city'],['block','t_block'],['plot','t_plot'],['area','t_area'],['base_per_m','t_base'],['prem','t_prem'],['total_per_m','t_perm'],['total_price','t_total'],['down_payment','t_down'],['map','t_map']];
 
 function params(forAll){
   const p={}; if(F.cities.size && F.cities.size!==ALL_CITIES.length) p.cities=[...F.cities].join(',');
@@ -75,43 +75,43 @@ function params(forAll){
 async function renderList(){
   const res = await Lands.query(params(false));
   curRows = res.rows;
-  $('#countPill').innerHTML = `النتائج: <b>${fmt(res.total)}</b> قطعة` + (res.total!==META.totals.plots?` من ${fmt(META.totals.plots)}`:'');
+  $('#countPill').innerHTML = `${t('results')}: <b>${fmt(res.total)}</b> ${t('plots_u')}` + (res.total!==META.totals.plots?` ${t('of_')} ${fmt(META.totals.plots)}`:'');
   // header
-  $('#tbl thead').innerHTML = '<tr>'+TCOLS.map(([k,t])=>{
+  $('#tbl thead').innerHTML = '<tr>'+TCOLS.map(([k,lbl])=>{
     const sk = k==='prem'?'premium':k;
     const sortable = k!=='map';
     const ar = (sortable&&F.sort===sk)?` <span class="ar">${F.dir==='asc'?'▲':'▼'}</span>`:'';
-    return `<th data-k="${k}" ${sortable?'':'style="cursor:default"'} title="${sortable?'اضغط للترتيب':''}">${t}${ar}</th>`;
+    return `<th data-k="${k}" ${sortable?'':'style="cursor:default"'} title="${sortable?t('click_sort'):''}">${t(lbl)}${ar}</th>`;
   }).join('')+'</tr>';
   // body
   $('#tbl tbody').innerHTML = curRows.map((r,i)=>{
-    const prem=[r.corner>0?'<span class="tag cor">ناصية</span>':'',r.garden>0?'<span class="tag gar">حدائق</span>':'',r.sea>0?'<span class="tag sea">بحر</span>':''].join('')||'<span class="c-muted">—</span>';
+    const prem=[r.corner>0?`<span class="tag cor">${t('tag_corner')}</span>`:'',r.garden>0?`<span class="tag gar">${t('tag_garden')}</span>`:'',r.sea>0?`<span class="tag sea">${t('tag_sea')}</span>`:''].join('')||'<span class="c-muted">—</span>';
     return `<tr>
       <td class="c-muted">${r.city}</td>
       <td class="c-muted">${r.block}</td>
-      <td><a class="plotlink" data-i="${i}" title="عرض الخريطة">🗺️ ${r.plot}</a></td>
+      <td><a class="plotlink" data-i="${i}" title="${t('show_map')}">🗺️ ${r.plot}</a></td>
       <td>${fmt1(r.area)}</td>
       <td>${fmt(r.base_per_m)}</td>
       <td>${prem}</td>
       <td>${fmt(r.total_per_m)}</td>
       <td><b>${fmt(r.total_price)}</b></td>
       <td>${fmt(r.down_payment)}</td>
-      <td><a class="plotlink" data-i="${i}">عرض ↗</a></td></tr>`;
-  }).join('') || '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--muted)">لا توجد نتائج مطابقة</td></tr>';
+      <td><a class="plotlink" data-i="${i}">${t('view')} ↗</a></td></tr>`;
+  }).join('') || `<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--muted)">${t('no_results')}</td></tr>`;
   $$('#tbl .plotlink').forEach(a=>a.onclick=()=>openMap(curRows[+a.dataset.i]));
   $$('#tbl thead th').forEach(th=>{ const k=th.dataset.k; if(k==='map')return; const sk=k==='prem'?'premium':k; th.onclick=()=>{ if(F.sort===sk)F.dir=F.dir==='asc'?'desc':'asc'; else{F.sort=sk;F.dir='desc';} F.page=1; syncSortControls(); renderList(); }; });
   renderPager(res);
 }
 function renderPager(res){
   const p=res.page,n=res.pages;
-  $('#pager').innerHTML=`<button id="pFirst" ${p<=1?'disabled':''}>«</button><button id="pPrev" ${p<=1?'disabled':''}>السابق</button>
-    <span>صفحة <input id="pInput" type="number" min="1" max="${n}" value="${p}"> من ${n}</span>
-    <button id="pNext" ${p>=n?'disabled':''}>التالي</button><button id="pLast" ${p>=n?'disabled':''}>»</button>`;
+  $('#pager').innerHTML=`<button id="pFirst" ${p<=1?'disabled':''}>«</button><button id="pPrev" ${p<=1?'disabled':''}>${t('prev')}</button>
+    <span>${t('page')} <input id="pInput" type="number" min="1" max="${n}" value="${p}"> ${t('of_')} ${n}</span>
+    <button id="pNext" ${p>=n?'disabled':''}>${t('next')}</button><button id="pLast" ${p>=n?'disabled':''}>»</button>`;
   const go=v=>{ F.page=Math.max(1,Math.min(n,v)); renderList(); };
   $('#pFirst').onclick=()=>go(1); $('#pPrev').onclick=()=>go(p-1); $('#pNext').onclick=()=>go(p+1); $('#pLast').onclick=()=>go(n);
   $('#pInput').onchange=e=>go(+e.target.value||1);
 }
-function syncSortControls(){ $('#sortSel').value=F.sort; $('#dirBtn').textContent=F.dir==='asc'?'▲ تصاعدي':'▼ تنازلي'; }
+function syncSortControls(){ $('#sortSel').value=F.sort; $('#dirBtn').textContent=F.dir==='asc'?t('dir_asc'):t('dir_desc'); }
 
 /* ---------- map modal + pan/zoom viewer ---------- */
 const V={scale:1,tx:0,ty:0,natW:0,natH:0,min:0.05};
@@ -133,23 +133,23 @@ function openMap(r){
   $('#mTitle').textContent=`${r.city} — ${r.block}`;
   $('#mSub').textContent=`${r.project}`;
   $('#mOpen').href=src;
-  $('#mHint').textContent=`ابحث عن رقم القطعة ${r.plot} على الخريطة`;
+  $('#mHint').textContent=`${t('m_find')} ${r.plot} ${t('m_on_map')}`;
   $('#plotInfo').innerHTML=`
-    <h4>رقم القطعة</h4><div class="big">${r.plot}</div>
-    <h4>الموقع</h4>
-    <div class="kv"><span>المدينة</span><span>${r.city}</span></div>
-    <div class="kv"><span>المربع / الحي</span><span>${r.block}</span></div>
-    <h4>المساحة والسعر</h4>
-    <div class="kv"><span>المساحة</span><span>${fmt1(r.area)} م²</span></div>
-    <div class="kv"><span>سعر المتر الأساسى</span><span>${fmt(r.base_per_m)}</span></div>
-    <div class="kv"><span>سعر المتر الإجمالي</span><span>${fmt(r.total_per_m)}</span></div>
-    <div class="kv"><span>السعر الإجمالي</span><span><b>${fmt(r.total_price)}</b></span></div>
-    <div class="kv"><span>الدفعة المقدمة</span><span>${fmt(r.down_payment)}</span></div>
-    <h4>التميّز</h4>
-    <div class="kv"><span>ناصية</span><span>${r.corner>0?fmt(r.corner):'—'}</span></div>
-    <div class="kv"><span>حدائق</span><span>${r.garden>0?fmt(r.garden):'—'}</span></div>
-    <div class="kv"><span>بحر / نيل</span><span>${r.sea>0?fmt(r.sea):'—'}</span></div>
-    <div class="locate">📍 الخريطة تعرض كامل المنطقة. استخدم عجلة الفأرة للتكبير واسحب للتنقل، وابحث عن رقم <b>${r.plot}</b>. القطع المتاحة مظللة بالأصفر في الخريطة الأصلية.</div>`;
+    <h4>${t('m_plotno')}</h4><div class="big">${r.plot}</div>
+    <h4>${t('m_location')}</h4>
+    <div class="kv"><span>${t('t_city')}</span><span>${r.city}</span></div>
+    <div class="kv"><span>${t('t_block')}</span><span>${r.block}</span></div>
+    <h4>${t('m_areaprice')}</h4>
+    <div class="kv"><span>${t('t_area')}</span><span>${fmt1(r.area)} م²</span></div>
+    <div class="kv"><span>${t('t_base')}</span><span>${fmt(r.base_per_m)}</span></div>
+    <div class="kv"><span>${t('t_perm')}</span><span>${fmt(r.total_per_m)}</span></div>
+    <div class="kv"><span>${t('t_total')}</span><span><b>${fmt(r.total_price)}</b></span></div>
+    <div class="kv"><span>${t('t_down')}</span><span>${fmt(r.down_payment)}</span></div>
+    <h4>${t('f_premium')}</h4>
+    <div class="kv"><span>${t('p_corner')}</span><span>${r.corner>0?fmt(r.corner):'—'}</span></div>
+    <div class="kv"><span>${t('p_garden')}</span><span>${r.garden>0?fmt(r.garden):'—'}</span></div>
+    <div class="kv"><span>${t('p_sea')}</span><span>${r.sea>0?fmt(r.sea):'—'}</span></div>
+    <div class="locate">📍 ${t('m_locate')}</div>`;
   $('#mapModal').hidden=false;
   V.natW=0; mImg.src=src;
   if(mImg.complete && mImg.naturalWidth){ V.natW=mImg.naturalWidth; V.natH=mImg.naturalHeight; vFit(); }
@@ -163,8 +163,8 @@ function buildCityDropdown(){
   $('#cityList').innerHTML = META.cities.map(c=>`<label class="row"><input type="checkbox" value="${c.name}" ${F.cities.has(c.name)?'checked':''}><span>${c.name} <span class="c-muted">· ${c.count}</span></span></label>`).join('');
   $$('#cityList input').forEach(cb=>cb.onchange=()=>{ cb.checked?F.cities.add(cb.value):F.cities.delete(cb.value); cityBtnTxt(); F.page=1; renderList(); });
 }
-function cityBtnTxt(){ $('#cityBtnTxt').textContent = F.cities.size===ALL_CITIES.length?'كل المدن':(F.cities.size===0?'لا مدن':`${F.cities.size} مدن`); }
-function buildSortSelect(){ $('#sortSel').innerHTML=SORTCOLS.map(([k,t])=>`<option value="${k}">${t}</option>`).join(''); syncSortControls(); }
+function cityBtnTxt(){ $('#cityBtnTxt').textContent = F.cities.size===ALL_CITIES.length?t('all_cities'):(F.cities.size===0?t('no_cities'):`${F.cities.size} ${t('cities_n')}`); }
+function buildSortSelect(){ $('#sortSel').innerHTML=SORTCOLS.map(([k,lbl])=>`<option value="${k}">${t(lbl)}</option>`).join(''); syncSortControls(); }
 function debounce(fn,ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; }
 function wireFilters(){
   $('#cityBtn').onclick=()=>$('#cityPanel').classList.toggle('open');
@@ -189,18 +189,38 @@ async function exportCSV(){
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download='NUCA_lands_filtered.csv'; a.click();
 }
 
-/* ---------- tabs + theme ---------- */
-let analyticsLoaded=false;
-async function showView(v){
-  $$('.tab').forEach(t=>t.classList.toggle('on',t.dataset.view===v));
-  $('#view-list').hidden=v!=='list'; $('#view-analytics').hidden=v!=='analytics';
-  if(v==='analytics'){ const rows=await Lands.all(params(true)); $('#anFilterHint').innerHTML=`التحليلات محسوبة على <b>${fmt(rows.length)}</b> قطعة ضمن التصفية الحالية.`; Analytics.render(rows); analyticsLoaded=true; }
+/* ---------- tabs / theme / language ---------- */
+const VIEWS=['list','analytics','premium','down','admin'];
+async function reRenderAnalytics(){
+  let v=null; ['analytics','premium','down'].forEach(n=>{ const el=document.getElementById('view-'+n); if(el && !el.hidden) v=n; });
+  if(!v) return;
+  const rows=await Lands.all(params(true));
+  if(v==='analytics') Analytics.render(rows,true);
+  else if(v==='premium') Analytics.renderPremium(rows,true);
+  else if(v==='down') Analytics.renderDown(rows,true);
 }
-$$('.tab').forEach(t=>t.onclick=()=>showView(t.dataset.view));
-$('#themeBtn').onclick=()=>{ document.body.classList.toggle('dark'); $('#themeBtn').textContent=document.body.classList.contains('dark')?'☀️':'🌙'; if(!$('#view-analytics').hidden && analyticsLoaded) Lands.all(params(true)).then(r=>Analytics.render(r,true)); };
+async function showView(v){
+  $$('.tab').forEach(el=>el.classList.toggle('on',el.dataset.view===v));
+  VIEWS.forEach(n=>{ const el=document.getElementById('view-'+n); if(el) el.hidden=n!==v; });
+  if(v==='analytics'||v==='premium'||v==='down'){
+    const rows=await Lands.all(params(true));
+    if(v==='analytics'){ $('#anFilterHint').innerHTML=`${t('an_filter_hint')} <b>${fmt(rows.length)}</b> ${t('within_filter')}`; Analytics.render(rows,true); }
+    else if(v==='premium'){ $('#prHint').innerHTML=`<b>${fmt(rows.length)}</b>`; Analytics.renderPremium(rows,true); }
+    else if(v==='down'){ $('#dpHintN').innerHTML=`<b>${fmt(rows.length)}</b>`; Analytics.renderDown(rows,true); }
+  }
+  if(v==='admin' && window.Admin && Admin.render) Admin.render();
+}
+$$('.tab').forEach(el=>el.onclick=()=>showView(el.dataset.view));
+$('#themeBtn').onclick=()=>{ document.body.classList.toggle('dark'); $('#themeBtn').textContent=document.body.classList.contains('dark')?'☀️':'🌙'; reRenderAnalytics(); };
+$('#langBtn').onclick=()=>{ I18N.set(I18N.lang==='ar'?'en':'ar'); applyLang(); };
+function applyLang(){
+  I18N.applyStatic();
+  $('#langBtn').textContent=I18N.t('lang_btn');
+  if(typeof APP_INITED!=='undefined' && APP_INITED){ cityBtnTxt(); buildSortSelect(); renderFooter(); renderList(); reRenderAnalytics(); }
+}
 
 function renderFooter(){
-  $('#foot').innerHTML=`<b>المصدر:</b> بوابة هيئة المجتمعات العمرانية الجديدة — «المرحلة الحادية عشر» · <b>اللقطة:</b> ٢٠٢٦/٠٦/٢٠ (تتغيّر القطع مع إتمام الحجوزات) · <b>القيم المالية:</b> كما هي منشورة بالبوابة · <b>التغطية:</b> ${fmt(META.totals.cities)} مدينة · ${fmt(META.totals.zones)} منطقة · ${fmt(META.totals.plots)} قطعة · وضع البيانات: <b>${Lands.useApi?'قاعدة بيانات (PHP)':'محلي'}</b>`;
+  $('#foot').innerHTML=`<b>${t('foot_source')}</b> ${t('foot_src_v')} · <b>${t('foot_snapshot')}</b> ${t('foot_snap_v')} · ${t('foot_money')} · ${fmt(META.totals.cities)} ${t('k_cities')} · ${fmt(META.totals.zones)} ${t('k_zones')} · ${fmt(META.totals.plots)} ${t('plots_u')} · ${t('foot_mode')} <b>${Lands.useApi?t('mode_db'):t('mode_local')}</b>`;
 }
 
 /* ---------- account gate ---------- */
@@ -223,6 +243,7 @@ async function initApp(){
 function enterApp(){
   const g=$('#authGate'); if(g) g.style.display='none';
   const ua=$('#userArea'); if(ua && Auth.user){ ua.hidden=false; $('#userName').textContent=Auth.user.full_name||Auth.user.email; }
+  if(Auth.user && Auth.user.role==='admin'){ const at=document.querySelector('.tab.admin-only'); if(at) at.hidden=false; if(window.Admin) Admin.user=Auth.user; }
   initApp();
 }
 function wireAuth(){
@@ -232,5 +253,6 @@ function wireAuth(){
   $('#registerForm').onsubmit=e=>{ e.preventDefault(); submit(e.target,'#registerErr','register',['full_name','email','phone','password']); };
   const lb=$('#logoutBtn'); if(lb) lb.onclick=()=>Auth.logout();
 }
+I18N.applyStatic(); $('#langBtn').textContent=I18N.t('lang_btn');
 (async()=>{ wireAuth(); if(await Auth.check()) enterApp(); })();
 window.addEventListener('resize',()=>{ if(!$('#mapModal').hidden) vFit(); });

@@ -137,3 +137,12 @@ body.dark .auth-brand h2{color:#fff}
 .user-area{display:flex;align-items:center;gap:8px}
 .user-name{color:#fff;font-size:13px;font-weight:700;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #logoutBtn{padding:6px 11px;font-size:12.5px}
+#langBtn{font-weight:800;min-width:34px}
+/* span-12 + mini tables for premium/down sections */
+.a12{grid-column:span 12}
+.mini{width:100%;border-collapse:collapse;font-size:12.5px}
+.mini th{color:var(--muted);font-weight:700;text-align:start;padding:7px 9px;border-bottom:1px solid var(--line);font-size:11px}
+.mini td{padding:7px 9px;border-bottom:1px solid var(--line2);font-variant-numeric:tabular-nums}
+.mini td.c{color:var(--muted)}.mini td.num{font-weight:600}
+.mini tbody tr:hover{background:var(--card2)}
+@media(max-width:1100px){.a12{grid-column:span 12}}

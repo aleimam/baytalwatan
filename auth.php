@@ -18,7 +18,8 @@ function ensure_users_table($pdo){
             email VARCHAR(190) NOT NULL UNIQUE,
             phone VARCHAR(30),
             password_hash VARCHAR(255) NOT NULL,
-            created_at VARCHAR(40)
+            created_at VARCHAR(40),
+            role VARCHAR(10) NOT NULL DEFAULT 'user'
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     } else {
         $pdo->exec("CREATE TABLE IF NOT EXISTS users(
@@ -27,9 +28,12 @@ function ensure_users_table($pdo){
             email TEXT NOT NULL UNIQUE,
             phone TEXT,
             password_hash TEXT NOT NULL,
-            created_at TEXT
+            created_at TEXT,
+            role TEXT NOT NULL DEFAULT 'user'
         )");
     }
+    // migrate older tables that pre-date the role column
+    try { $pdo->exec("ALTER TABLE users ADD COLUMN role " . ((($DB['driver'] ?? 'sqlite')==='mysql') ? "VARCHAR(10) NOT NULL DEFAULT 'user'" : "TEXT NOT NULL DEFAULT 'user'")); } catch (Throwable $e) {}
 }
 
 try {
@@ -39,7 +43,7 @@ try {
 
     if ($action === 'me') {
         if (!empty($_SESSION['uid'])) {
-            $st = $pdo->prepare('SELECT id, full_name, email, phone FROM users WHERE id = ?');
+            $st = $pdo->prepare('SELECT id, full_name, email, phone, role FROM users WHERE id = ?');
             $st->execute([$_SESSION['uid']]);
             $u = $st->fetch();
             if ($u) jexit(['auth' => true, 'user' => $u]);
@@ -65,7 +69,7 @@ try {
         $st = $pdo->prepare('INSERT INTO users(full_name, email, phone, password_hash, created_at) VALUES(?,?,?,?,?)');
         $st->execute([$name, $email, $phone, password_hash($pass, PASSWORD_DEFAULT), gmdate('c')]);
         $_SESSION['uid'] = $pdo->lastInsertId();
-        jexit(['auth' => true, 'user' => ['full_name' => $name, 'email' => $email, 'phone' => $phone]]);
+        jexit(['auth' => true, 'user' => ['full_name' => $name, 'email' => $email, 'phone' => $phone, 'role' => 'user']]);
     }
 
     if ($action === 'login') {
@@ -80,7 +84,7 @@ try {
             jexit(['error' => 'البريد الإلكتروني أو كلمة المرور غير صحيحة']);
         }
         $_SESSION['uid'] = $u['id'];
-        jexit(['auth' => true, 'user' => ['full_name' => $u['full_name'], 'email' => $u['email'], 'phone' => $u['phone']]]);
+        jexit(['auth' => true, 'user' => ['full_name' => $u['full_name'], 'email' => $u['email'], 'phone' => $u['phone'], 'role' => $u['role'] ?? 'user']]);
     }
 
     if ($action === 'logout') { $_SESSION = []; @session_destroy(); jexit(['ok' => true]); }

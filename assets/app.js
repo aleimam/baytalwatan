@@ -216,7 +216,17 @@ $('#langBtn').onclick=()=>{ I18N.set(I18N.lang==='ar'?'en':'ar'); applyLang(); }
 function applyLang(){
   I18N.applyStatic();
   $('#langBtn').textContent=I18N.t('lang_btn');
+  if(SETTINGS) applySettings(SETTINGS);
   if(typeof APP_INITED!=='undefined' && APP_INITED){ cityBtnTxt(); buildSortSelect(); renderFooter(); renderList(); reRenderAnalytics(); }
+}
+let SETTINGS=null;
+function applySettings(s){
+  if(!s) return; SETTINGS=s;
+  if(s.site_title) $('#siteTitle').textContent=s.site_title;
+  const subEl=$('#siteSub'), sub=(I18N.lang==='en'?s.site_sub_en:s.site_sub_ar);
+  if(sub){ subEl.removeAttribute('data-i18n'); subEl.textContent=sub; } else { subEl.setAttribute('data-i18n','brand_sub'); subEl.textContent=I18N.t('brand_sub'); }
+  if(s.accent) document.documentElement.style.setProperty('--accent',s.accent);
+  [['analytics',s.show_analytics],['premium',s.show_premium],['down',s.show_down]].forEach(([v,on])=>{ const tab=document.querySelector(`.tab[data-view="${v}"]`); if(tab) tab.style.display=(on==='0'?'none':''); });
 }
 
 function renderFooter(){
@@ -254,5 +264,6 @@ function wireAuth(){
   const lb=$('#logoutBtn'); if(lb) lb.onclick=()=>Auth.logout();
 }
 I18N.applyStatic(); $('#langBtn').textContent=I18N.t('lang_btn');
+fetch('admin.php?action=settings_get').then(r=>r.json()).then(j=>{ if(j&&j.settings) applySettings(j.settings); }).catch(()=>{});
 (async()=>{ wireAuth(); if(await Auth.check()) enterApp(); })();
 window.addEventListener('resize',()=>{ if(!$('#mapModal').hidden) vFit(); });

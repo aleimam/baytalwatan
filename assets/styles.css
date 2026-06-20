@@ -10,6 +10,7 @@ body.dark{
   --good:#48a14a; --bad:#fb7185; --shadow:0 8px 24px rgba(0,0,0,.45);
 }
 *{margin:0;padding:0;box-sizing:border-box}
+[hidden]{display:none !important}
 html,body{background:var(--bg);color:var(--txt);font-family:'Noto Sans Arabic','Inter','Segoe UI','Tahoma',sans-serif;line-height:1.55}
 body{padding-bottom:30px}
 a{color:var(--accent);text-decoration:none;cursor:pointer}

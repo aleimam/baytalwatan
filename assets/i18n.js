@@ -169,7 +169,6 @@ const I18N = {
     g_phone:          { ar:'رقم الهاتف', en:'Phone number' },
     g_login_btn:      { ar:'دخول', en:'Sign in' },
     g_register_btn:   { ar:'إنشاء حساب ودخول', en:'Create account & sign in' },
-    g_note:           { ar:'بإنشائك حساباً فإنك توافق على استخدام بياناتك للتواصل بخصوص خدمات الأراضي.', en:'By creating an account you agree we may use your details to contact you about land services.' },
     // footer
     foot_source:      { ar:'المصدر:', en:'Source:' },
     foot_src_v:       { ar:'بوابة هيئة المجتمعات العمرانية الجديدة — «المرحلة الحادية عشر»', en:'New Urban Communities Authority portal — "11th Stage"' },

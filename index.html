@@ -11,6 +11,36 @@
 <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
+<!-- ============ REGISTRATION / LOGIN GATE ============ -->
+<div id="authGate" class="auth-gate">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <span class="logo-badge big"><img src="assets/icon.png" alt="بيت الوطن"></span>
+      <h2>بيت الوطن</h2>
+      <p>خدمات عقارية مجانية — سجّل للدخول إلى دليل الأراضي</p>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab on" data-form="login" type="button">تسجيل الدخول</button>
+      <button class="auth-tab" data-form="register" type="button">إنشاء حساب</button>
+    </div>
+    <form id="loginForm" class="auth-form">
+      <label>البريد الإلكتروني<input type="email" name="email" autocomplete="email" required></label>
+      <label>كلمة المرور<input type="password" name="password" autocomplete="current-password" required></label>
+      <div class="auth-err" id="loginErr"></div>
+      <button type="submit" class="auth-submit">دخول</button>
+    </form>
+    <form id="registerForm" class="auth-form" hidden>
+      <label>الاسم بالكامل<input type="text" name="full_name" autocomplete="name" required></label>
+      <label>البريد الإلكتروني<input type="email" name="email" autocomplete="email" required></label>
+      <label>رقم الهاتف<input type="tel" name="phone" autocomplete="tel" placeholder="01xxxxxxxxx" required></label>
+      <label>كلمة المرور<input type="password" name="password" autocomplete="new-password" minlength="6" required></label>
+      <div class="auth-err" id="registerErr"></div>
+      <button type="submit" class="auth-submit">إنشاء حساب ودخول</button>
+    </form>
+    <div class="auth-note">بإنشائك حساباً فإنك توافق على استخدام بياناتك للتواصل بخصوص خدمات الأراضي.</div>
+  </div>
+</div>
+
 <header class="appbar">
   <div class="wrap bar">
     <div class="brand">
@@ -23,6 +53,7 @@
     <nav class="tabs">
       <button class="tab on" data-view="list">القائمة والخرائط</button>
       <button class="tab" data-view="analytics">لوحة التحليلات</button>
+      <span class="user-area" id="userArea" hidden><span class="user-name" id="userName"></span><button class="btn ghost" id="logoutBtn" title="تسجيل الخروج">خروج ⏻</button></span>
       <button class="btn ghost" id="themeBtn" title="تبديل السمة">🌙</button>
     </nav>
   </div>

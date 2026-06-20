@@ -4,11 +4,11 @@ const NUMCOLS = ['zone_id','plot','area','base_per_m','corner','garden','sea','t
 const fmt = n => (n==null||n===''||isNaN(n)) ? '—' : Math.round(Number(n)).toLocaleString('en-US');
 const fmt1 = n => (n==null||isNaN(n)) ? '—' : Number(n).toLocaleString('en-US',{maximumFractionDigits:1});
 const compact = n => { n=Number(n); const a=Math.abs(n); if(a>=1e9)return (n/1e9).toFixed(2)+'B'; if(a>=1e6)return (n/1e6).toFixed(1)+'M'; if(a>=1e3)return (n/1e3).toFixed(0)+'K'; return Math.round(n).toString(); };
-function normalize(r){ NUMCOLS.forEach(c=>{ if(r[c]!=null) r[c]=Number(r[c]); }); return r; }
+function normalize(r){ NUMCOLS.forEach(c=>{ if(r[c]!=null) r[c]=Number(r[c]); }); r.premCount=(r.corner>0?1:0)+(r.garden>0?1:0)+(r.sea>0?1:0); return r; }
 
 /* ---------- local (static) engine over data.js ---------- */
 const COLS = window.LANDS_COLS || [];
-const REC = (window.LANDS_ROWS || []).map((row,i)=>{ const o={id:i}; COLS.forEach((c,j)=>o[c]=row[j]); return o; });
+const REC = (window.LANDS_ROWS || []).map((row,i)=>{ const o={id:i}; COLS.forEach((c,j)=>o[c]=row[j]); o.premCount=(o.corner>0?1:0)+(o.garden>0?1:0)+(o.sea>0?1:0); return o; });
 function localMeta(){
   const cityMap={};
   REC.forEach(r=>{ (cityMap[r.city]=cityMap[r.city]||{name:r.city,en:r.city_en,count:0,value:0,area:0}); const o=cityMap[r.city]; o.count++; o.value+=r.total_price; o.area+=r.area; });
@@ -42,8 +42,8 @@ function localFilter(p){
 }
 function localQuery(p){
   let rows=localFilter(p);
-  const sort=p.sort||'total_price', dir=(p.dir==='asc')?1:-1;
-  rows=rows.slice().sort((a,b)=>{ let x=a[sort],y=b[sort]; if(typeof x==='string') return dir*String(x).localeCompare(String(y),'ar'); return dir*((x||0)-(y||0)); });
+  const sort=(p.sort==='premium')?'premCount':(p.sort||'total_price'), dir=(p.dir==='asc')?1:-1;
+  rows=rows.slice().sort((a,b)=>{ let x=a[sort],y=b[sort],c; if(typeof x==='string') c=String(x).localeCompare(String(y),'ar'); else c=(x||0)-(y||0); if(c===0&&sort==='premCount') c=(a.total_price||0)-(b.total_price||0); return dir*c; });
   const total=rows.length, per=+p.per||50, page=+p.page||1, pages=Math.max(1,Math.ceil(total/per));
   return {total,page,per,pages,rows:rows.slice((page-1)*per,(page-1)*per+per)};
 }
@@ -60,7 +60,7 @@ const Lands = {
 /* ---------- filter state ---------- */
 const F = {cities:new Set(), pMin:'',pMax:'',aMin:'',aMax:'',tMin:'',tMax:'',dMin:'',dMax:'',prem:'',q:'',sort:'total_price',dir:'desc',page:1,per:50};
 let META=null, ALL_CITIES=[], curRows=[];
-const SORTCOLS=[['total_price','السعر الإجمالي'],['total_per_m','سعر المتر الإجمالي'],['area','المساحة'],['plot','رقم القطعة'],['city','المدينة'],['zone_id','المنطقة'],['base_per_m','سعر المتر الأساسى'],['down_payment','الدفعة المقدمة'],['corner','تميّز ناصية'],['garden','تميّز حدائق'],['sea','تميّز بحر/نيل']];
+const SORTCOLS=[['total_price','السعر الإجمالي'],['total_per_m','سعر المتر الإجمالي'],['premium','التميّز (الأكثر مزايا أولاً)'],['area','المساحة'],['plot','رقم القطعة'],['city','المدينة'],['zone_id','المنطقة'],['base_per_m','سعر المتر الأساسى'],['down_payment','الدفعة المقدمة'],['corner','تميّز ناصية'],['garden','تميّز حدائق'],['sea','تميّز بحر/نيل']];
 const TCOLS=[['city','المدينة'],['block','المربع'],['plot','القطعة'],['area','المساحة م²'],['base_per_m','سعر المتر الأساسى'],['prem','التميّز'],['total_per_m','سعر المتر الإجمالي'],['total_price','السعر الإجمالي'],['down_payment','الدفعة المقدمة'],['map','الخريطة']];
 
 function params(forAll){
@@ -78,9 +78,10 @@ async function renderList(){
   $('#countPill').innerHTML = `النتائج: <b>${fmt(res.total)}</b> قطعة` + (res.total!==META.totals.plots?` من ${fmt(META.totals.plots)}`:'');
   // header
   $('#tbl thead').innerHTML = '<tr>'+TCOLS.map(([k,t])=>{
-    const sortable = k!=='prem'&&k!=='map';
-    const ar = (sortable&&F.sort===k)?` <span class="ar">${F.dir==='asc'?'▲':'▼'}</span>`:'';
-    return `<th data-k="${k}" ${sortable?'':'style="cursor:default"'}>${t}${ar}</th>`;
+    const sk = k==='prem'?'premium':k;
+    const sortable = k!=='map';
+    const ar = (sortable&&F.sort===sk)?` <span class="ar">${F.dir==='asc'?'▲':'▼'}</span>`:'';
+    return `<th data-k="${k}" ${sortable?'':'style="cursor:default"'} title="${sortable?'اضغط للترتيب':''}">${t}${ar}</th>`;
   }).join('')+'</tr>';
   // body
   $('#tbl tbody').innerHTML = curRows.map((r,i)=>{
@@ -98,7 +99,7 @@ async function renderList(){
       <td><a class="plotlink" data-i="${i}">عرض ↗</a></td></tr>`;
   }).join('') || '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--muted)">لا توجد نتائج مطابقة</td></tr>';
   $$('#tbl .plotlink').forEach(a=>a.onclick=()=>openMap(curRows[+a.dataset.i]));
-  $$('#tbl thead th').forEach(th=>{ const k=th.dataset.k; if(k==='prem'||k==='map')return; th.onclick=()=>{ if(F.sort===k)F.dir=F.dir==='asc'?'desc':'asc'; else{F.sort=k;F.dir='desc';} F.page=1; syncSortControls(); renderList(); }; });
+  $$('#tbl thead th').forEach(th=>{ const k=th.dataset.k; if(k==='map')return; const sk=k==='prem'?'premium':k; th.onclick=()=>{ if(F.sort===sk)F.dir=F.dir==='asc'?'desc':'asc'; else{F.sort=sk;F.dir='desc';} F.page=1; syncSortControls(); renderList(); }; });
   renderPager(res);
 }
 function renderPager(res){
@@ -202,13 +203,34 @@ function renderFooter(){
   $('#foot').innerHTML=`<b>المصدر:</b> بوابة هيئة المجتمعات العمرانية الجديدة — «المرحلة الحادية عشر» · <b>اللقطة:</b> ٢٠٢٦/٠٦/٢٠ (تتغيّر القطع مع إتمام الحجوزات) · <b>القيم المالية:</b> كما هي منشورة بالبوابة · <b>التغطية:</b> ${fmt(META.totals.cities)} مدينة · ${fmt(META.totals.zones)} منطقة · ${fmt(META.totals.plots)} قطعة · وضع البيانات: <b>${Lands.useApi?'قاعدة بيانات (PHP)':'محلي'}</b>`;
 }
 
-/* ---------- init ---------- */
-(async()=>{
+/* ---------- account gate ---------- */
+const Auth = {
+  user:null,
+  async check(){ try{ const j=await (await fetch('auth.php?action=me',{cache:'no-store'})).json(); if(j&&j.auth){ this.user=j.user; return true; } }catch(e){} return false; },
+  async post(action,data){ try{ const j=await (await fetch('auth.php?action='+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})).json(); if(j&&j.auth){ this.user=j.user; return {ok:true}; } return {ok:false,error:(j&&j.error)||'تعذّر إتمام العملية'}; }catch(e){ return {ok:false,error:'تعذّر الاتصال بالخادم — حدّث الصفحة وحاول مجدداً'}; } },
+  logout(){ fetch('auth.php?action=logout',{method:'POST'}).finally(()=>location.reload()); }
+};
+let APP_INITED=false;
+async function initApp(){
+  if(APP_INITED) return; APP_INITED=true;
   await Lands.detect();
   META=await Lands.meta();
   ALL_CITIES=META.cities.map(c=>c.name);
   F.cities=new Set(ALL_CITIES);
   buildCityDropdown(); cityBtnTxt(); buildSortSelect(); wireFilters(); renderFooter();
   await renderList();
-})();
+}
+function enterApp(){
+  const g=$('#authGate'); if(g) g.style.display='none';
+  const ua=$('#userArea'); if(ua && Auth.user){ ua.hidden=false; $('#userName').textContent=Auth.user.full_name||Auth.user.email; }
+  initApp();
+}
+function wireAuth(){
+  $$('.auth-tab').forEach(b=>b.onclick=()=>{ $$('.auth-tab').forEach(x=>x.classList.toggle('on',x===b)); $('#loginForm').hidden=b.dataset.form!=='login'; $('#registerForm').hidden=b.dataset.form!=='register'; });
+  const submit=async(form,errId,action,fields)=>{ const er=$(errId), btn=form.querySelector('button[type=submit]'); er.textContent=''; btn.disabled=true; const d={}; fields.forEach(f=>d[f]=form[f].value); const r=await Auth.post(action,d); btn.disabled=false; if(r.ok) enterApp(); else er.textContent=r.error; };
+  $('#loginForm').onsubmit=e=>{ e.preventDefault(); submit(e.target,'#loginErr','login',['email','password']); };
+  $('#registerForm').onsubmit=e=>{ e.preventDefault(); submit(e.target,'#registerErr','register',['full_name','email','phone','password']); };
+  const lb=$('#logoutBtn'); if(lb) lb.onclick=()=>Auth.logout();
+}
+(async()=>{ wireAuth(); if(await Auth.check()) enterApp(); })();
 window.addEventListener('resize',()=>{ if(!$('#mapModal').hidden) vFit(); });

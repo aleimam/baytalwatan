@@ -5,7 +5,7 @@ header('Access-Control-Allow-Origin: *');
 require __DIR__ . '/config.php';
 
 $SORTABLE = ['id','city','city_en','project','zone_id','block','plot','area','base_per_m',
-             'corner','garden','sea','total_per_m','total_price','down_payment'];
+             'corner','garden','sea','total_per_m','total_price','down_payment','premium'];
 
 function param($k, $d = null) { return isset($_GET[$k]) && $_GET[$k] !== '' ? $_GET[$k] : $d; }
 
@@ -80,7 +80,8 @@ try {
     $cnt->execute($args);
     $total = (int)$cnt->fetchColumn();
 
-    $sql = "SELECT * FROM plots $wsql ORDER BY $sort $dir, id ASC LIMIT $per OFFSET $offset";
+    $orderExpr = $sort === 'premium' ? '((corner>0)+(garden>0)+(sea>0))' : $sort;
+    $sql = "SELECT * FROM plots $wsql ORDER BY $orderExpr $dir, total_price DESC, id ASC LIMIT $per OFFSET $offset";
     $st = $pdo->prepare($sql);
     $st->execute($args);
     $rows = $st->fetchAll();

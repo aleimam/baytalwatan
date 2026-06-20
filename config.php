@@ -8,6 +8,7 @@
 $DB = [
     'driver'      => 'sqlite',                       // 'sqlite' or 'mysql'
     'sqlite_path' => __DIR__ . '/db/lands.db',
+    'users_sqlite'=> __DIR__ . '/../baytalwatan_users.db', // accounts DB — OUTSIDE web root, survives redeploys
     'mysql'       => [
         'host' => 'localhost',
         'name' => 'lands_db',
@@ -29,4 +30,21 @@ function db() {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     return $pdo;
+}
+
+// Connection for user accounts. MySQL: same DB. SQLite: a separate file kept
+// OUTSIDE the web root so it isn't web-served and survives redeploys.
+function udb() {
+    global $DB;
+    static $u = null;
+    if ($u) return $u;
+    if (($DB['driver'] ?? 'sqlite') === 'mysql') {
+        $u = db();
+    } else {
+        $path = getenv('LANDS_USERS_DB') ?: ($DB['users_sqlite'] ?? (__DIR__ . '/../baytalwatan_users.db'));
+        $u = new PDO('sqlite:' . $path);
+        $u->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $u->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+    }
+    return $u;
 }

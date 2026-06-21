@@ -263,9 +263,9 @@ function renderFooter(){
 /* ---------- account gate ---------- */
 const Auth = {
   user:null,
-  async check(){ try{ const j=await (await fetch('auth.php?action=me',{cache:'no-store'})).json(); if(j&&j.auth){ this.user=j.user; return true; } }catch(e){} return false; },
-  async post(action,data){ try{ const j=await (await fetch('auth.php?action='+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})).json(); if(j&&j.auth){ this.user=j.user; return {ok:true}; } return {ok:false,error:(j&&j.error)||'تعذّر إتمام العملية'}; }catch(e){ return {ok:false,error:'تعذّر الاتصال بالخادم — حدّث الصفحة وحاول مجدداً'}; } },
-  logout(){ fetch('auth.php?action=logout',{method:'POST'}).finally(()=>location.reload()); }
+  async check(){ try{ const j=await (await fetch('api/auth?action=me',{cache:'no-store'})).json(); if(j&&j.auth){ this.user=j.user; return true; } }catch(e){} return false; },
+  async post(action,data){ try{ const j=await (await fetch('api/auth?action='+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})).json(); if(j&&j.auth){ this.user=j.user; return {ok:true}; } return {ok:false,error:(j&&j.error)||'تعذّر إتمام العملية'}; }catch(e){ return {ok:false,error:'تعذّر الاتصال بالخادم — حدّث الصفحة وحاول مجدداً'}; } },
+  logout(){ fetch('api/auth?action=logout',{method:'POST'}).finally(()=>location.reload()); }
 };
 let APP_INITED=false;
 async function initApp(){
@@ -293,5 +293,6 @@ function wireAuth(){
   const lb=$('#logoutBtn'); if(lb) lb.onclick=()=>Auth.logout();
 }
 applyLang();
-enterApp();   // login / registration disabled — portal is open to everyone
+fetch('api/admin?action=settings_get').then(r=>r.json()).then(j=>{ if(j&&j.settings) applySettings(j.settings); }).catch(()=>{});
+(async()=>{ wireAuth(); if(await Auth.check()) enterApp(); })();
 window.addEventListener('resize',()=>{ if(!$('#mapModal').hidden) vFit(); });

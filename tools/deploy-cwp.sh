@@ -71,7 +71,7 @@ fi
 shopt -s dotglob
 rm -rf "${DOCROOT:?}/"*
 cp -a "$TMP/app/." "$DOCROOT/"
-rm -rf "$DOCROOT/.git" "$DOCROOT/tools" "$DOCROOT/data" "$TMP"
+rm -rf "$DOCROOT/.git" "$DOCROOT/tools" "$DOCROOT/data" "$DOCROOT/server" "$TMP"
 
 # 6) Permissions, ownership, SELinux context
 chown -R "$OWNER" "$DOCROOT"

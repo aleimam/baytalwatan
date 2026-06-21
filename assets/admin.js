@@ -3,7 +3,7 @@ const Admin = {
   user:null, users:[], settings:null, tab:'users', _wired:false,
   async api(action,data){
     const o = data ? {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)} : {};
-    try { return await (await fetch('admin.php?action='+action,o)).json(); } catch(e){ return {error:'network'}; }
+    try { return await (await fetch('api/admin?action='+action,o)).json(); } catch(e){ return {error:'network'}; }
   },
   async render(){
     if(!this._wired){

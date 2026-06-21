@@ -95,6 +95,7 @@ function params(forAll){
 
 /* ---------- list view ---------- */
 async function renderList(){
+  if(typeof closeWishPop==='function') closeWishPop();   // a re-render detaches the anchored hearts
   const res = await Lands.query(params(false));
   curRows = res.rows;
   $('#countPill').innerHTML = `${t('results')}: <b>${fmt(res.total)}</b> ${t('plots_u')}` + (res.total!==META.totals.plots?` ${t('of_')} ${fmt(META.totals.plots)}`:'');
@@ -117,7 +118,7 @@ async function renderList(){
 window.refreshWishHearts=function(){ if(window.Wish) $$('#tbl .wish-heart').forEach(b=>b.classList.toggle('on', Wish.has(b.dataset.wk))); };
 /* ---------- wishlist picker popover (heart click → choose a list) ---------- */
 let WISH_POP=null;
-function closeWishPop(){ if(!WISH_POP) return; WISH_POP.remove(); WISH_POP=null; document.removeEventListener('mousedown',onWishPopOutside,true); document.removeEventListener('keydown',onWishPopKey,true); }
+function closeWishPop(){ if(!WISH_POP) return; WISH_POP.remove(); WISH_POP=null; document.removeEventListener('mousedown',onWishPopOutside,true); document.removeEventListener('keydown',onWishPopKey,true); window.removeEventListener('scroll',closeWishPop,true); }
 function onWishPopOutside(e){ if(WISH_POP && !WISH_POP.contains(e.target) && !(e.target.classList&&e.target.classList.contains('wish-heart'))) closeWishPop(); }
 function onWishPopKey(e){ if(e.key==='Escape') closeWishPop(); }
 function placeWishPop(pop, rect){
@@ -140,7 +141,7 @@ function openWishPop(anchor, key){
   Wish.renderControl(pop.querySelector('.wish-pop-inner'), r);   // sets the loading state synchronously, then fills async
   placeWishPop(pop, rect);                                       // place now (min-width is known)
   setTimeout(()=>{ if(WISH_POP===pop) placeWishPop(pop, rect); }, 140);   // re-clamp once the lists finish loading (height may grow)
-  setTimeout(()=>{ if(!WISH_POP) return; document.addEventListener('mousedown',onWishPopOutside,true); document.addEventListener('keydown',onWishPopKey,true); },0);
+  setTimeout(()=>{ if(!WISH_POP) return; document.addEventListener('mousedown',onWishPopOutside,true); document.addEventListener('keydown',onWishPopKey,true); window.addEventListener('scroll',closeWishPop,true); },0);
 }
 function renderPager(res){
   const p=res.page,n=res.pages;
@@ -157,7 +158,7 @@ function syncSortControls(){ $('#sortSel').value=F.sort; $('#dirBtn').textConten
 const V={scale:1,tx:0,ty:0,natW:0,natH:0,min:0.05};
 const viewer=$('#viewer'), mImg=$('#mImg');
 function vApply(){ mImg.style.transform=`translate(${V.tx}px,${V.ty}px) scale(${V.scale})`; }
-function vFit(){ const vw=viewer.clientWidth,vh=viewer.clientHeight; if(!V.natW)return; const s=Math.min(vw/V.natW,vh/V.natH); V.min=s*0.9; V.scale=s; V.tx=(vw-V.natW*s)/2; V.ty=(vh-V.natH*s)/2; vApply(); }
+function vFit(){ const vw=viewer.clientWidth,vh=viewer.clientHeight; if(!V.natW||!vw||!vh)return; const s=Math.min(vw/V.natW,vh/V.natH); V.min=s*0.9; V.scale=s; V.tx=(vw-V.natW*s)/2; V.ty=(vh-V.natH*s)/2; vApply(); }
 function vZoom(cx,cy,factor){ const ns=Math.max(V.min,Math.min(10,V.scale*factor)); V.tx=cx-(cx-V.tx)*(ns/V.scale); V.ty=cy-(cy-V.ty)*(ns/V.scale); V.scale=ns; vApply(); }
 mImg.onload=()=>{ V.natW=mImg.naturalWidth; V.natH=mImg.naturalHeight; vFit(); };
 viewer.addEventListener('wheel',e=>{ e.preventDefault(); const r=viewer.getBoundingClientRect(); vZoom(e.clientX-r.left,e.clientY-r.top,e.deltaY<0?1.18:1/1.18); },{passive:false});
@@ -171,6 +172,7 @@ $('#mReset').onclick=vFit;
 // keep the overlay buttons from starting a map drag / pan
 $('#mapZoom').addEventListener('pointerdown',e=>e.stopPropagation());
 function openMap(r){
+  if(typeof closeWishPop==='function') closeWishPop();
   const src='maps/'+r.map_file;
   $('#mTitle').textContent=`${r.city} — ${r.block}`;
   $('#mSub').textContent=`${r.project}`;
@@ -207,7 +209,9 @@ function openMap(r){
   if(window.Wish) Wish.renderControl($('#wishControl'), r);
   $('#mapModal').hidden=false;
   V.natW=0; mImg.src=src;
-  if(mImg.complete && mImg.naturalWidth){ V.natW=mImg.naturalWidth; V.natH=mImg.naturalHeight; vFit(); }
+  // cached image: complete is true synchronously, but the just-shown modal hasn't laid out yet
+  // (viewer width can be 0 → scale 0 = blank map). Defer the fit to the next frame.
+  if(mImg.complete && mImg.naturalWidth){ V.natW=mImg.naturalWidth; V.natH=mImg.naturalHeight; requestAnimationFrame(vFit); }
 }
 function closeMap(){ $('#mapModal').hidden=true; mImg.src=''; }
 $$('#mapModal [data-close]').forEach(el=>el.onclick=closeMap);

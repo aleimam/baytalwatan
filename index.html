@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@500;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/styles.css?v=14">
+<link rel="stylesheet" href="assets/styles.css?v=15">
 </head>
 <body>
 <!-- ============ REGISTRATION / LOGIN GATE ============ -->
@@ -183,15 +183,18 @@
     <div class="modal-head">
       <div><h3 id="mTitle">—</h3><div class="msub" id="mSub">—</div></div>
       <div class="mtools">
-        <button class="btn ghost" id="mZoomOut">−</button>
-        <button class="btn ghost" id="mZoomIn">+</button>
-        <button class="btn ghost" id="mReset">⟲</button>
-        <a class="btn ghost" id="mOpen" target="_blank">⤢</a>
-        <button class="btn" data-close>✕</button>
+        <a class="btn ghost" id="mOpen" target="_blank" data-i18n-title="m_open">⤢</a>
+        <button class="btn" data-close data-i18n-title="m_close">✕</button>
       </div>
     </div>
     <div class="modal-body">
-      <div class="viewer" id="viewer"><img id="mImg" alt="map" draggable="false"><div class="viewer-hint" id="mHint"></div></div>
+      <div class="viewer" id="viewer"><img id="mImg" alt="map" draggable="false">
+        <div class="map-zoom" id="mapZoom">
+          <button class="mz-btn" id="mZoomIn" data-i18n-title="m_zoom_in" aria-label="zoom in">＋</button>
+          <button class="mz-btn" id="mZoomOut" data-i18n-title="m_zoom_out" aria-label="zoom out">−</button>
+          <button class="mz-btn mz-fit" id="mReset" data-i18n-title="m_fit" aria-label="fit">⤢</button>
+        </div>
+        <div class="viewer-hint" id="mHint"></div></div>
       <aside class="plot-info" id="plotInfo"></aside>
     </div>
   </div>
@@ -200,13 +203,13 @@
 <footer class="wrap foot" id="foot"></footer>
 
 <script src="assets/data.js?d=1"></script>
-<script src="assets/i18n.js?v=14"></script>
+<script src="assets/i18n.js?v=15"></script>
 <script src="assets/echarts.min.js"></script>
 <script src="assets/analytics.js?v=6"></script>
 <script src="assets/admin.js?v=10"></script>
 <script src="assets/terms.js?v=1"></script>
 <script src="assets/wish.js?v=4"></script>
-<script src="assets/app.js?v=17"></script>
+<script src="assets/app.js?v=18"></script>
 <script src="assets/track.js?v=1"></script>
 </body>
 </html>

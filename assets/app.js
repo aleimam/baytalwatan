@@ -168,6 +168,8 @@ viewer.addEventListener('pointerup',e=>{ drag=null; viewer.classList.remove('gra
 $('#mZoomIn').onclick=()=>vZoom(viewer.clientWidth/2,viewer.clientHeight/2,1.3);
 $('#mZoomOut').onclick=()=>vZoom(viewer.clientWidth/2,viewer.clientHeight/2,1/1.3);
 $('#mReset').onclick=vFit;
+// keep the overlay buttons from starting a map drag / pan
+$('#mapZoom').addEventListener('pointerdown',e=>e.stopPropagation());
 function openMap(r){
   const src='maps/'+r.map_file;
   $('#mTitle').textContent=`${r.city} — ${r.block}`;

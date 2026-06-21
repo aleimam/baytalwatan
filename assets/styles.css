@@ -202,6 +202,17 @@ body.dark .terms-sec h3{color:#dfe7f5}
 .vs-kpis .kpi{padding:12px 14px}.vs-kpis .kpi .val{font-size:22px}
 .col-dd{position:relative;display:inline-block}
 .col-dd .dd-panel{inset-inline-end:0;min-width:180px;max-height:320px;overflow:auto}
+/* wishlists */
+.wish-control{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+.wl-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.wl-chip{background:var(--card2);border:1px solid var(--line);border-radius:18px;padding:5px 11px;font-size:12px;font-weight:600;color:var(--txt);cursor:pointer;font-family:inherit;transition:background .15s}
+.wl-chip.on{background:var(--green);color:#fff;border-color:var(--green)}
+.wl-chip.on .c-muted{color:#e8f3e8}
+.wl-chip.new{color:var(--gold2);border-style:dashed}
+.wl-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.wl-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.wl-head h3{margin:0;font-size:15px;color:var(--navy)}
+body.dark .wl-head h3{color:#dfe7f5}
 .bd-sub{font-size:11.5px;color:var(--muted2);margin-inline-start:auto}
 #bdDim{background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:5px 9px;font-size:12.5px;font-family:inherit}
 .ch-head{flex-wrap:wrap}

@@ -24,6 +24,7 @@ const USERS_FILE  = process.env.USERS_FILE    || path.join(DATA_DIR, 'bayt_users
 const SETT_FILE   = process.env.SETTINGS_FILE || path.join(DATA_DIR, 'bayt_settings.json');
 const SECRET_FILE = process.env.SECRET_FILE   || path.join(DATA_DIR, 'bayt_session_secret');
 const VISITS_FILE = process.env.VISITS_FILE   || path.join(DATA_DIR, 'bayt_visits.jsonl');
+const WISH_FILE   = process.env.WISH_FILE     || path.join(DATA_DIR, 'bayt_wishlists.json');
 const WEBROOT     = process.env.WEBROOT || ''; // optional: also serve static files (handy for local dev)
 const SESSION_DAYS = 30;
 const VISITS_KEEP  = 30000;   // cap the visit log to the most recent N events
@@ -168,6 +169,47 @@ function aggregateVisits(){
   return { summary, sessions: list.slice(0, 800) };
 }
 
+/* ---------- wishlists (per user) ---------- */
+const loadWish = () => readJSON(WISH_FILE, {});
+const saveWish = (w) => writeJSON(WISH_FILE, w);
+function newWid(){ return 'w' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+async function handleWishlists(req, res, action){
+  const me = currentUser(req);
+  if (!me) return json(res, 401, { error: 'login required' });
+  const all = loadWish();
+  const mine = all[me.email] || (all[me.email] = []);
+  if (action === '' || action === 'list') return json(res, 200, { wishlists: mine });
+  const body = await readBody(req);
+  const id = clip(body.id, 40);
+  const wl = mine.find(w => w.id === id);
+  const now = new Date().toISOString();
+  if (action === 'create') {
+    if (mine.length >= 40) return json(res, 200, { error: 'too many wishlists', wishlists: mine });
+    const w = { id: newWid(), name: clip(body.name, 60).trim() || 'قائمتي', plots: [], created_at: now, updated_at: now };
+    mine.push(w); saveWish(all); return json(res, 200, { wishlists: mine, created: w.id });
+  }
+  if (action === 'rename') { if (wl) { wl.name = clip(body.name, 60).trim() || wl.name; wl.updated_at = now; saveWish(all); } return json(res, 200, { wishlists: mine }); }
+  if (action === 'delete') { all[me.email] = mine.filter(w => w.id !== id); saveWish(all); return json(res, 200, { wishlists: all[me.email] }); }
+  if (action === 'add')    { if (wl) { const p = clip(body.plot, 40); if (p && wl.plots.indexOf(p) < 0) { wl.plots.push(p); wl.updated_at = now; saveWish(all); } } return json(res, 200, { wishlists: mine }); }
+  if (action === 'remove') { if (wl) { const p = clip(body.plot, 40); wl.plots = wl.plots.filter(x => x !== p); wl.updated_at = now; saveWish(all); } return json(res, 200, { wishlists: mine }); }
+  return json(res, 400, { error: 'unknown action' });
+}
+function aggregateWishlists(){
+  const all = loadWish();
+  const lists = [], freq = {};
+  let savedPlots = 0;
+  for (const email in all) {
+    for (const w of all[email]) {
+      lists.push({ user: email, id: w.id, name: w.name, count: (w.plots || []).length, plots: w.plots || [], created_at: w.created_at });
+      savedPlots += (w.plots || []).length;
+      for (const p of (w.plots || [])) freq[p] = (freq[p] || 0) + 1;
+    }
+  }
+  const topPlots = Object.entries(freq).map(([plot, count]) => ({ plot, count })).sort((a, b) => b.count - a.count).slice(0, 150);
+  const summary = { wishlists: lists.length, users: Object.keys(all).length, savedPlots, uniquePlots: Object.keys(freq).length };
+  return { summary, lists: lists.sort((a, b) => (a.created_at < b.created_at ? 1 : -1)).slice(0, 600), topPlots };
+}
+
 /* ---------- auth ---------- */
 async function handleAuth(req, res, action, secure){
   if (action === 'me')     { const u = currentUser(req); return json(res, 200, u ? { auth: true, user: publicUser(u) } : { auth: false }); }
@@ -207,6 +249,7 @@ async function handleAdmin(req, res, action){
   if (!me || me.role !== 'admin') return json(res, 403, { error: 'admin only' });
   if (action === 'users') return json(res, 200, { users: loadUsers().map(publicUser) });
   if (action === 'visits') return json(res, 200, aggregateVisits());
+  if (action === 'wishlists') return json(res, 200, aggregateWishlists());
   const body = await readBody(req);
   if (action === 'set_role') {
     const users = loadUsers();
@@ -265,6 +308,7 @@ const SRV = http.createServer(async (req, res) => {
   try {
     if (u.pathname === '/api/ping')  return json(res, 200, { ok: true });
     if (u.pathname === '/api/track') return await handleTrack(req, res);
+    if (u.pathname === '/api/wishlists') return await handleWishlists(req, res, action);
     if (u.pathname === '/api/auth')  return await handleAuth(req, res, action, secure);
     if (u.pathname === '/api/admin') return await handleAdmin(req, res, action);
     return serveStatic(req, res);

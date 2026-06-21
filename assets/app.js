@@ -9,6 +9,9 @@ function normalize(r){ NUMCOLS.forEach(c=>{ if(r[c]!=null) r[c]=Number(r[c]); })
 /* ---------- local (static) engine over data.js ---------- */
 const COLS = window.LANDS_COLS || [];
 const REC = (window.LANDS_ROWS || []).map((row,i)=>{ const o={id:i}; COLS.forEach((c,j)=>o[c]=row[j]); o.premCount=(o.corner>0?1:0)+(o.garden>0?1:0)+(o.sea>0?1:0); return o; });
+const plotKey = r => r.zone_id+'-'+r.plot;
+const plotByKey = {}; REC.forEach(r=>{ plotByKey[plotKey(r)]=r; });
+window.plotKey = plotKey; window.plotByKey = plotByKey;
 function localMeta(){
   const cityMap={};
   REC.forEach(r=>{ (cityMap[r.city]=cityMap[r.city]||{name:r.city,en:r.city_en,count:0,value:0,area:0}); const o=cityMap[r.city]; o.count++; o.value+=r.total_price; o.area+=r.area; });
@@ -166,8 +169,10 @@ function openMap(r){
     <div class="kv"><span>${t('p_garden')}</span><span>${r.garden>0?fmt(r.garden):'—'}</span></div>
     <div class="kv"><span>${t('p_sea')}</span><span>${r.sea>0?fmt(r.sea):'—'}</span></div>
     ${brBlock}
-    <div class="locate">📍 ${t('m_locate')}</div>`;
+    <div class="locate">📍 ${t('m_locate')}</div>
+    <div id="wishControl" class="wish-control"></div>`;
   const bl=$('#brLink'); if(bl) bl.onclick=()=>{ closeMap(); showView('terms'); };
+  if(window.Wish && Auth.user) Wish.renderControl($('#wishControl'), r);
   $('#mapModal').hidden=false;
   V.natW=0; mImg.src=src;
   if(mImg.complete && mImg.naturalWidth){ V.natW=mImg.naturalWidth; V.natH=mImg.naturalHeight; vFit(); }
@@ -273,7 +278,7 @@ async function exportCSV(){
 }
 
 /* ---------- tabs / theme / language ---------- */
-const VIEWS=['list','analytics','premium','terms','admin'];
+const VIEWS=['list','analytics','premium','terms','wish','admin'];
 async function reRenderAnalytics(){
   const v=currentView(); if(!['analytics','premium'].includes(v)) return;
   const rows=await Lands.all(params(true)); updateCount(rows.length);
@@ -291,6 +296,7 @@ async function showView(v){
     else if(v==='premium'){ $('#prHint').innerHTML=`<b>${fmt(rows.length)}</b>`; Analytics.renderPremium(rows,true); }
   }
   if(v==='terms' && window.Terms) Terms.render($('#termsBody'));
+  if(v==='wish' && window.Wish) Wish.render($('#wishBody'));
   if(v==='admin' && window.Admin && Admin.render) Admin.render();
 }
 $$('.tab').forEach(el=>el.onclick=()=>showView(el.dataset.view));

@@ -1,26 +1,73 @@
 /* ============================================================================
-   Wishlists (favorites) — per user, multiple lists. Save plots to view later.
-   Backend: /api/wishlists (list/create/rename/delete/add/remove).
-   Admins: /api/admin?action=wishlists  (frequency analytics).
+   Wishlists (favorites) — available to EVERYONE.
+   - Logged-in users: stored server-side (/api/wishlists), visible to admins.
+   - Anonymous visitors: stored in localStorage ('bw_wish'); migrated to the
+     account on register/sign-in so nothing is lost.
+   Multiple lists per user. Quick ♥ in the list + full picker in the plot popup.
    ========================================================================== */
 const Wish = (() => {
   let lists = [];
   const esc = x => String(x == null ? '' : x).replace(/</g, '&lt;').replace(/"/g, '&quot;');
-  async function api(action, data) {
+  const authed = () => !!(window.Auth && Auth.user);
+  const rid = () => 'L' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+  /* ---- stores ---- */
+  function loadLocal(){ try { return JSON.parse(localStorage.getItem('bw_wish') || '[]'); } catch (e) { return []; } }
+  function saveLocal(){ try { localStorage.setItem('bw_wish', JSON.stringify(lists)); } catch (e) {} }
+  async function srv(action, data){
     const o = data ? { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) } : {};
     try { return await (await fetch('api/wishlists' + (action ? ('?action=' + action) : ''), o)).json(); }
     catch (e) { return { error: 'network' }; }
   }
-  async function load() { const r = await api(''); if (r.wishlists) lists = r.wishlists; return lists; }
 
-  /* ---- add-to-wishlist control, rendered inside the plot popup ---- */
-  async function renderControl(el, plotRow) {
+  async function load(){
+    if (authed()) { const r = await srv(''); lists = (r && r.wishlists) || []; }
+    else { lists = loadLocal(); }
+    return lists;
+  }
+  /* ---- mode-aware operations ---- */
+  async function createList(name){
+    name = (name || t('wl_default')).trim() || t('wl_default');
+    if (authed()) { const r = await srv('create', { name }); if (r.wishlists) lists = r.wishlists; return r.created; }
+    const w = { id: rid(), name, plots: [], created_at: new Date().toISOString() }; lists.push(w); saveLocal(); return w.id;
+  }
+  async function renameList(id, name){
+    if (authed()) { const r = await srv('rename', { id, name }); if (r.wishlists) lists = r.wishlists; return; }
+    const w = lists.find(x => x.id === id); if (w) { w.name = (name || w.name).trim() || w.name; saveLocal(); }
+  }
+  async function deleteList(id){
+    if (authed()) { const r = await srv('delete', { id }); if (r.wishlists) lists = r.wishlists; return; }
+    lists = lists.filter(w => w.id !== id); saveLocal();
+  }
+  async function addPlot(id, key){
+    if (authed()) { const r = await srv('add', { id, plot: key }); if (r.wishlists) lists = r.wishlists; return; }
+    const w = lists.find(x => x.id === id); if (w && (w.plots || (w.plots = [])).indexOf(key) < 0) { w.plots.push(key); saveLocal(); }
+  }
+  async function removePlot(id, key){
+    if (authed()) { const r = await srv('remove', { id, plot: key }); if (r.wishlists) lists = r.wishlists; return; }
+    const w = lists.find(x => x.id === id); if (w) { w.plots = (w.plots || []).filter(x => x !== key); saveLocal(); }
+  }
+  function has(key){ return lists.some(w => (w.plots || []).indexOf(key) >= 0); }
+  async function toggleDefault(key){
+    if (has(key)) { for (const w of lists.slice()) if ((w.plots || []).indexOf(key) >= 0) await removePlot(w.id, key); return false; }
+    let id = lists[0] && lists[0].id; if (!id) id = await createList(t('wl_default'));
+    await addPlot(id, key); return true;
+  }
+  /* push anonymous (localStorage) lists onto the account after sign-in */
+  async function migrate(){
+    const local = loadLocal(); if (!local.length) return;
+    for (const w of local) { const r = await srv('create', { name: w.name }); const id = r && r.created; if (id) for (const p of (w.plots || [])) await srv('add', { id, plot: p }); }
+    try { localStorage.removeItem('bw_wish'); } catch (e) {}
+    await load();
+  }
+
+  /* ---- add-to-wishlist control inside the plot popup ---- */
+  async function renderControl(el, plotRow){
     if (!el) return;
     const key = window.plotKey(plotRow);
     el.innerHTML = `<h4>${t('wl_save')}</h4><div class="wl-chips" id="wlChips"><span class="c-muted">${t('vs_loading')}</span></div>`;
-    await load();
-    draw();
-    function draw() {
+    await load(); draw();
+    function draw(){
       const chips = lists.map(w => {
         const on = (w.plots || []).indexOf(key) >= 0;
         return `<button class="wl-chip${on ? ' on' : ''}" data-id="${w.id}">${on ? '✓ ' : '+ '}${esc(w.name)} <span class="c-muted">(${(w.plots || []).length})</span></button>`;
@@ -28,26 +75,21 @@ const Wish = (() => {
       el.querySelector('#wlChips').innerHTML = chips + `<button class="wl-chip new" id="wlNew">★ ${t('wl_new')}</button>`;
       el.querySelectorAll('.wl-chip[data-id]').forEach(b => b.onclick = async () => {
         const w = lists.find(x => x.id === b.dataset.id); const on = (w.plots || []).indexOf(key) >= 0;
-        b.disabled = true;
-        const r = await api(on ? 'remove' : 'add', { id: w.id, plot: key });
-        if (r.wishlists) lists = r.wishlists; draw();
+        b.disabled = true; await (on ? removePlot : addPlot)(w.id, key); draw(); if (window.refreshWishHearts) refreshWishHearts();
       });
       const nb = el.querySelector('#wlNew');
-      if (nb) nb.onclick = async () => {
-        const name = prompt(t('wl_new_prompt')); if (name === null) return;
-        const r = await api('create', { name: name || '' });
-        if (r.wishlists) { lists = r.wishlists; if (r.created) { const rr = await api('add', { id: r.created, plot: key }); if (rr.wishlists) lists = rr.wishlists; } draw(); }
-      };
+      if (nb) nb.onclick = async () => { const name = prompt(t('wl_new_prompt')); if (name === null) return; const id = await createList(name); if (id) await addPlot(id, key); draw(); if (window.refreshWishHearts) refreshWishHearts(); };
     }
   }
 
   /* ---- the user's Wishlists tab ---- */
-  async function render(el) {
+  async function render(el){
     if (!el) return;
-    el.innerHTML = `<div class="ad-bar"><h2 class="section-title" style="margin:0">${t('tab_wish')}</h2><span class="spacer"></span><button class="btn solid" id="wlAdd">★ ${t('wl_new')}</button></div><div id="wlBody"><span class="c-muted">${t('vs_loading')}</span></div>`;
-    el.querySelector('#wlAdd').onclick = async () => { const name = prompt(t('wl_new_prompt')); if (name === null) return; const r = await api('create', { name: name || '' }); if (r.wishlists) { lists = r.wishlists; drawBody(); } };
+    el.innerHTML = `<div class="ad-bar"><h2 class="section-title" style="margin:0">${t('tab_wish')}</h2><span class="spacer"></span><button class="btn solid" id="wlAdd">★ ${t('wl_new')}</button></div>
+      ${authed() ? '' : `<div class="terms-note">${t('wl_anon_note')}</div>`}<div id="wlBody"><span class="c-muted">${t('vs_loading')}</span></div>`;
+    el.querySelector('#wlAdd').onclick = async () => { const name = prompt(t('wl_new_prompt')); if (name === null) return; await createList(name); drawBody(); };
     await load(); drawBody();
-    function drawBody() {
+    function drawBody(){
       const body = el.querySelector('#wlBody');
       if (!lists.length) { body.innerHTML = `<div class="terms-note">${t('wl_empty')}</div>`; return; }
       body.innerHTML = lists.map(w => {
@@ -64,14 +106,14 @@ const Wish = (() => {
         </section>`;
       }).join('');
       body.querySelectorAll('.wl-open').forEach(a => a.onclick = () => { const r = window.plotByKey[a.dataset.k]; if (r) openMap(r); });
-      body.querySelectorAll('.wl-rm').forEach(b => b.onclick = async () => { await api('remove', { id: b.dataset.w, plot: b.dataset.k }); await load(); drawBody(); });
-      body.querySelectorAll('.wl-del').forEach(b => b.onclick = async () => { if (confirm(t('wl_confirm_del'))) { await api('delete', { id: b.dataset.id }); await load(); drawBody(); } });
-      body.querySelectorAll('.wl-ren').forEach(b => b.onclick = async () => { const w = lists.find(x => x.id === b.dataset.id); const name = prompt(t('wl_new_prompt'), w ? w.name : ''); if (name === null) return; await api('rename', { id: b.dataset.id, name: name }); await load(); drawBody(); });
+      body.querySelectorAll('.wl-rm').forEach(b => b.onclick = async () => { await removePlot(b.dataset.w, b.dataset.k); drawBody(); if (window.refreshWishHearts) refreshWishHearts(); });
+      body.querySelectorAll('.wl-del').forEach(b => b.onclick = async () => { if (confirm(t('wl_confirm_del'))) { await deleteList(b.dataset.id); drawBody(); if (window.refreshWishHearts) refreshWishHearts(); } });
+      body.querySelectorAll('.wl-ren').forEach(b => b.onclick = async () => { const w = lists.find(x => x.id === b.dataset.id); const name = prompt(t('wl_new_prompt'), w ? w.name : ''); if (name === null) return; await renameList(b.dataset.id, name); drawBody(); });
     }
   }
 
-  /* ---- admin analytics ---- */
-  async function adminRender(el) {
+  /* ---- admin analytics (server data = registered users) ---- */
+  async function adminRender(el){
     if (!el) return;
     el.innerHTML = `<div class="ad-bar"><span class="c-muted">${t('vs_loading')}</span></div>`;
     let d; try { d = await (await fetch('api/admin?action=wishlists')).json(); } catch (e) { d = {}; }
@@ -84,15 +126,15 @@ const Wish = (() => {
     const byCity = {}; top.forEach(x => { byCity[x.r.city] = (byCity[x.r.city] || 0) + x.count; });
     const cityRows = Object.entries(byCity).sort((a, b) => b[1] - a[1]).map(([c, n]) => `<tr><td>${c}</td><td class="num"><b>${n}</b></td></tr>`).join('');
     const listRows = lists2.slice(0, 250).map(w => `<tr><td class="c-muted">${esc(w.user)}</td><td>${esc(w.name)}</td><td class="num">${w.count}</td><td class="c-muted">${(w.created_at || '').slice(0, 10)}</td></tr>`).join('');
-    el.innerHTML = `<section class="kpis vs-kpis">${cards}</section>
-      <h3 class="terms-sec" style="background:none;border:none;padding:0;margin:6px 0">${t('wl_a_top')}</h3>
+    el.innerHTML = `<div class="ad-note">${t('wl_a_note')}</div><section class="kpis vs-kpis">${cards}</section>
+      <h3 style="margin:6px 0">${t('wl_a_top')}</h3>
       <div class="tbl-wrap"><table class="data adtbl"><thead><tr><th>${t('wl_a_freq')}</th><th>${t('t_plot')}</th><th>${t('t_city')}</th><th>${t('t_block')}</th><th>${t('t_area')}</th><th>${t('t_total')}</th></tr></thead><tbody>${topRows || ''}</tbody></table></div>
-      <h3 class="terms-sec" style="background:none;border:none;padding:0;margin:12px 0 6px">${t('wl_a_bycity')}</h3>
+      <h3 style="margin:12px 0 6px">${t('wl_a_bycity')}</h3>
       <div class="tbl-wrap"><table class="data adtbl"><thead><tr><th>${t('t_city')}</th><th>${t('wl_a_freq')}</th></tr></thead><tbody>${cityRows}</tbody></table></div>
-      <h3 class="terms-sec" style="background:none;border:none;padding:0;margin:12px 0 6px">${t('wl_a_all')}</h3>
+      <h3 style="margin:12px 0 6px">${t('wl_a_all')}</h3>
       <div class="tbl-wrap"><table class="data adtbl"><thead><tr><th>${t('vs_user')}</th><th>${t('wl_name')}</th><th>${t('wl_count')}</th><th>${t('ad_created')}</th></tr></thead><tbody>${listRows || ''}</tbody></table></div>`;
   }
 
-  return { load, render, adminRender, renderControl };
+  return { load, render, adminRender, renderControl, has, toggleDefault, migrate };
 })();
 window.Wish = Wish;

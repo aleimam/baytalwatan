@@ -65,11 +65,12 @@ const Lands = {
 const F = {cities:new Set(), block:'', pMin:'',pMax:'',aMin:'',aMax:'',tMin:'',tMax:'',dMin:'',dMax:'',prem:'',q:'',sort:'total_price',dir:'desc',page:1,per:50};
 let META=null, ALL_CITIES=[], curRows=[];
 const SORTCOLS=[['total_price','s_total'],['total_per_m','s_perm'],['premium','s_premium'],['area','s_area'],['plot','s_plot'],['city','s_city'],['zone_id','s_zone'],['base_per_m','s_base'],['down_payment','s_down'],['corner','s_corner'],['garden','s_garden'],['sea','s_sea']];
-const TCOLS=[['city','t_city'],['block','t_block'],['plot','t_plot'],['area','t_area'],['base_per_m','t_base'],['prem','t_prem'],['total_per_m','t_perm'],['total_price','t_total'],['down_payment','t_down'],['map','t_map']];
-let colVis = (function(){ try{ const s=JSON.parse(localStorage.getItem('bw_cols')); if(Array.isArray(s)&&s.length) return new Set(s.filter(k=>TCOLS.some(c=>c[0]===k))); }catch(e){} return new Set(TCOLS.map(c=>c[0])); })();
+const TCOLS=[['wish','t_wish'],['city','t_city'],['block','t_block'],['plot','t_plot'],['area','t_area'],['base_per_m','t_base'],['prem','t_prem'],['total_per_m','t_perm'],['total_price','t_total'],['down_payment','t_down'],['map','t_map']];
+let colVis = (function(){ try{ const s=JSON.parse(localStorage.getItem('bw_cols')); if(Array.isArray(s)&&s.length){ const set=new Set(s.filter(k=>TCOLS.some(c=>c[0]===k))); if(!localStorage.getItem('bw_cols_wish')){ set.add('wish'); try{localStorage.setItem('bw_cols_wish','1'); localStorage.setItem('bw_cols',JSON.stringify([...set]));}catch(e){} } return set; } }catch(e){} return new Set(TCOLS.map(c=>c[0])); })();
 const visTCOLS = () => TCOLS.filter(c=>colVis.has(c[0]));
 function premTags(r){ return [r.corner>0?`<span class="tag cor">${t('tag_corner')}</span>`:'',r.garden>0?`<span class="tag gar">${t('tag_garden')}</span>`:'',r.sea>0?`<span class="tag sea">${t('tag_sea')}</span>`:''].join('')||'<span class="c-muted">—</span>'; }
 function cellFor(r,k,i){ switch(k){
+  case 'wish': return `<td class="wish-cell"><button class="wish-heart${(window.Wish&&Wish.has(plotKey(r)))?' on':''}" data-wk="${plotKey(r)}" title="${t('wl_save')}" aria-label="${t('wl_save')}">♥</button></td>`;
   case 'city': return `<td class="c-muted">${r.city}</td>`;
   case 'block': return `<td class="c-muted">${r.block}</td>`;
   case 'plot': return `<td><a class="plotlink" data-i="${i}" title="${t('show_map')}">🗺️ ${r.plot}</a></td>`;
@@ -101,7 +102,7 @@ async function renderList(){
   // header
   $('#tbl thead').innerHTML = '<tr>'+cols.map(([k,lbl])=>{
     const sk = k==='prem'?'premium':k;
-    const sortable = k!=='map';
+    const sortable = k!=='map' && k!=='wish';
     const ar = (sortable&&F.sort===sk)?` <span class="ar">${F.dir==='asc'?'▲':'▼'}</span>`:'';
     return `<th data-k="${k}" ${sortable?'':'style="cursor:default"'} title="${sortable?t('click_sort'):''}">${t(lbl)}${ar}</th>`;
   }).join('')+'</tr>';
@@ -109,9 +110,11 @@ async function renderList(){
   $('#tbl tbody').innerHTML = curRows.map((r,i)=>'<tr>'+cols.map(([k])=>cellFor(r,k,i)).join('')+'</tr>').join('')
     || `<tr><td colspan="${cols.length}" style="text-align:center;padding:30px;color:var(--muted)">${t('no_results')}</td></tr>`;
   $$('#tbl .plotlink').forEach(a=>a.onclick=()=>openMap(curRows[+a.dataset.i]));
-  $$('#tbl thead th').forEach(th=>{ const k=th.dataset.k; if(k==='map')return; const sk=k==='prem'?'premium':k; th.onclick=()=>{ if(F.sort===sk)F.dir=F.dir==='asc'?'desc':'asc'; else{F.sort=sk;F.dir='desc';} F.page=1; syncSortControls(); renderList(); }; });
+  $$('#tbl .wish-heart').forEach(b=>b.onclick=async()=>{ b.disabled=true; await Wish.toggleDefault(b.dataset.wk); b.classList.toggle('on', Wish.has(b.dataset.wk)); b.disabled=false; });
+  $$('#tbl thead th').forEach(th=>{ const k=th.dataset.k; if(k==='map'||k==='wish')return; const sk=k==='prem'?'premium':k; th.onclick=()=>{ if(F.sort===sk)F.dir=F.dir==='asc'?'desc':'asc'; else{F.sort=sk;F.dir='desc';} F.page=1; syncSortControls(); renderList(); }; });
   renderPager(res);
 }
+window.refreshWishHearts=function(){ if(window.Wish) $$('#tbl .wish-heart').forEach(b=>b.classList.toggle('on', Wish.has(b.dataset.wk))); };
 function renderPager(res){
   const p=res.page,n=res.pages;
   $('#pager').innerHTML=`<button id="pFirst" ${p<=1?'disabled':''}>«</button><button id="pPrev" ${p<=1?'disabled':''}>${t('prev')}</button>
@@ -172,7 +175,7 @@ function openMap(r){
     <div class="locate">📍 ${t('m_locate')}</div>
     <div id="wishControl" class="wish-control"></div>`;
   const bl=$('#brLink'); if(bl) bl.onclick=()=>{ closeMap(); showView('terms'); };
-  if(window.Wish && Auth.user) Wish.renderControl($('#wishControl'), r);
+  if(window.Wish) Wish.renderControl($('#wishControl'), r);
   $('#mapModal').hidden=false;
   V.natW=0; mImg.src=src;
   if(mImg.complete && mImg.naturalWidth){ V.natW=mImg.naturalWidth; V.natH=mImg.naturalHeight; vFit(); }
@@ -330,6 +333,7 @@ const Auth = {
   async post(action,data){ try{ const j=await (await fetch('api/auth?action='+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})).json(); if(j&&j.auth){ this.user=j.user; return {ok:true}; } return {ok:false,error:(j&&j.error)||'تعذّر إتمام العملية'}; }catch(e){ return {ok:false,error:'تعذّر الاتصال بالخادم — حدّث الصفحة وحاول مجدداً'}; } },
   logout(){ fetch('api/auth?action=logout',{method:'POST'}).finally(()=>location.reload()); }
 };
+window.Auth = Auth;
 let APP_INITED=false;
 async function initApp(){
   if(APP_INITED) return; APP_INITED=true;
@@ -339,6 +343,7 @@ async function initApp(){
   F.cities=new Set(ALL_CITIES);
   document.body.classList.add('on-list');
   buildCityDropdown(); cityBtnTxt(); buildSortSelect(); wireFilters(); renderFooter(); renderChips();
+  if(window.Wish){ try{ await Wish.load(); }catch(e){} }
   await renderList();
 }
 /* ---------- 60-second grace period before the gate ---------- */
@@ -361,7 +366,7 @@ function enterApp(){
 function wireAuth(){
   $$('#authLang button').forEach(b=>b.onclick=()=>{ I18N.set(b.dataset.setlang); applyLang(); });
   $$('.auth-tab').forEach(b=>b.onclick=()=>{ $$('.auth-tab').forEach(x=>x.classList.toggle('on',x===b)); $('#loginForm').hidden=b.dataset.form!=='login'; $('#registerForm').hidden=b.dataset.form!=='register'; });
-  const submit=async(form,errId,action,fields)=>{ const er=$(errId), btn=form.querySelector('button[type=submit]'); er.textContent=''; btn.disabled=true; const d={}; fields.forEach(f=>d[f]=form[f].value); const r=await Auth.post(action,d); btn.disabled=false; if(r.ok) enterApp(); else er.textContent=r.error; };
+  const submit=async(form,errId,action,fields)=>{ const er=$(errId), btn=form.querySelector('button[type=submit]'); er.textContent=''; btn.disabled=true; const d={}; fields.forEach(f=>d[f]=form[f].value); const r=await Auth.post(action,d); btn.disabled=false; if(r.ok){ if(window.Wish){ try{ await Wish.migrate(); }catch(e){} } enterApp(); if(window.refreshWishHearts) refreshWishHearts(); } else er.textContent=r.error; };
   $('#loginForm').onsubmit=e=>{ e.preventDefault(); submit(e.target,'#loginErr','login',['email','password']); };
   $('#registerForm').onsubmit=e=>{ e.preventDefault(); submit(e.target,'#registerErr','register',['full_name','email','phone','password']); };
   const lb=$('#logoutBtn'); if(lb) lb.onclick=()=>Auth.logout();

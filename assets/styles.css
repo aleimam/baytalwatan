@@ -213,6 +213,11 @@ body.dark .terms-sec h3{color:#dfe7f5}
 .wl-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
 .wl-head h3{margin:0;font-size:15px;color:var(--navy)}
 body.dark .wl-head h3{color:#dfe7f5}
+.wish-cell{text-align:center;width:34px;padding-inline:2px}
+.wish-heart{background:none;border:none;cursor:pointer;font-size:17px;line-height:1;color:var(--line2);transition:transform .12s,color .12s;padding:2px 5px}
+.wish-heart:hover{color:#e2718a;transform:scale(1.2)}
+.wish-heart.on{color:#e23b5a}
+#tbl thead th[data-k="wish"]{font-size:15px;color:#e23b5a}
 .bd-sub{font-size:11.5px;color:var(--muted2);margin-inline-start:auto}
 #bdDim{background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:5px 9px;font-size:12.5px;font-family:inherit}
 .ch-head{flex-wrap:wrap}

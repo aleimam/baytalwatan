@@ -60,6 +60,33 @@ const Wish = (() => {
   }
   const migrate = load;   // sign-in: load() pushes any local lists onto the account + reloads
 
+  /* ---- sharing: encode the plot keys into a link anyone can open ---- */
+  function shareUrl(w){ return location.origin + location.pathname + '?wl=' + encodeURIComponent((w.plots || []).join(',')) + '&n=' + encodeURIComponent(w.name || ''); }
+  async function shareList(w){
+    const url = shareUrl(w);
+    try { if (navigator.share) { await navigator.share({ title: w.name || t('tab_wish'), text: t('wl_share_text'), url }); return; } } catch (e) { return; }
+    try { await navigator.clipboard.writeText(url); alert(t('wl_share_copied')); return; } catch (e) {}
+    prompt(t('wl_share_copy'), url);
+  }
+  function renderShared(el, keys, name){
+    if (!el) return;
+    const plots = (keys || []).map(k => window.plotByKey[k]).filter(Boolean);
+    const rows = plots.map(r => `<tr>
+      <td><a class="plotlink sh-open" data-k="${window.plotKey(r)}">🗺️ ${r.plot}</a></td>
+      <td class="c-muted">${r.city}</td><td class="c-muted">${r.block}</td>
+      <td>${fmt1(r.area)}</td><td><b>${fmt(r.total_price)}</b></td></tr>`).join('');
+    el.innerHTML = `<div class="ad-bar"><h2 class="section-title" style="margin:0">${t('wl_shared_title')}${name ? ': ' + esc(name) : ''} <span class="c-muted">· ${plots.length}</span></h2><span class="spacer"></span>
+      <button class="btn solid" id="shAdd">★ ${t('wl_shared_add')}</button>
+      <button class="btn" id="shBrowse">${t('wl_shared_browse')}</button></div>
+      <div class="terms-note">${t('wl_shared_note')}</div>
+      ${plots.length ? `<div class="tbl-wrap"><table class="data adtbl"><thead><tr><th>${t('t_plot')}</th><th>${t('t_city')}</th><th>${t('t_block')}</th><th>${t('t_area')}</th><th>${t('t_total')}</th></tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="terms-note">${t('wl_shared_empty')}</div>`}`;
+    el.querySelectorAll('.sh-open').forEach(a => a.onclick = () => { const r = window.plotByKey[a.dataset.k]; if (r) openMap(r); });
+    const add = el.querySelector('#shAdd');
+    if (add) add.onclick = async () => { add.disabled = true; await load(); const id = await createList(name || t('wl_shared_default')); for (const k of (keys || [])) await addPlot(id, k); add.textContent = '✓ ' + t('wl_shared_added'); if (window.refreshWishHearts) refreshWishHearts(); };
+    const br = el.querySelector('#shBrowse');
+    if (br) br.onclick = () => { try { history.replaceState({}, '', location.pathname); } catch (e) {} if (typeof showView === 'function') showView('list'); };
+  }
+
   /* ---- add-to-wishlist control inside the plot popup ---- */
   async function renderControl(el, plotRow){
     if (!el) return;
@@ -99,6 +126,7 @@ const Wish = (() => {
           <td>${fmt1(r.area)}</td><td><b>${fmt(r.total_price)}</b></td>
           <td><button class="btn sm danger wl-rm" data-w="${w.id}" data-k="${window.plotKey(r)}">✕</button></td></tr>`).join('');
         return `<section class="wl-card"><div class="wl-head"><h3>${esc(w.name)} <span class="c-muted">· ${plots.length}</span></h3><span class="spacer"></span>
+          <button class="btn sm wl-share" data-id="${w.id}">🔗 ${t('wl_share')}</button>
           <button class="btn sm wl-ren" data-id="${w.id}">${t('wl_rename')}</button>
           <button class="btn sm danger wl-del" data-id="${w.id}">${t('wl_delete')}</button></div>
           ${plots.length ? `<div class="tbl-wrap"><table class="data adtbl"><thead><tr><th>${t('t_plot')}</th><th>${t('t_city')}</th><th>${t('t_block')}</th><th>${t('t_area')}</th><th>${t('t_total')}</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="c-muted" style="padding:6px 2px">${t('wl_no_plots')}</div>`}
@@ -108,6 +136,7 @@ const Wish = (() => {
       body.querySelectorAll('.wl-rm').forEach(b => b.onclick = async () => { await removePlot(b.dataset.w, b.dataset.k); drawBody(); if (window.refreshWishHearts) refreshWishHearts(); });
       body.querySelectorAll('.wl-del').forEach(b => b.onclick = async () => { if (confirm(t('wl_confirm_del'))) { await deleteList(b.dataset.id); drawBody(); if (window.refreshWishHearts) refreshWishHearts(); } });
       body.querySelectorAll('.wl-ren').forEach(b => b.onclick = async () => { const w = lists.find(x => x.id === b.dataset.id); const name = prompt(t('wl_new_prompt'), w ? w.name : ''); if (name === null) return; await renameList(b.dataset.id, name); drawBody(); });
+      body.querySelectorAll('.wl-share').forEach(b => b.onclick = () => { const w = lists.find(x => x.id === b.dataset.id); if (w) shareList(w); });
     }
   }
 
@@ -134,6 +163,6 @@ const Wish = (() => {
       <div class="tbl-wrap"><table class="data adtbl"><thead><tr><th>${t('vs_user')}</th><th>${t('wl_name')}</th><th>${t('wl_count')}</th><th>${t('ad_created')}</th></tr></thead><tbody>${listRows || ''}</tbody></table></div>`;
   }
 
-  return { load, render, adminRender, renderControl, has, toggleDefault, migrate };
+  return { load, render, adminRender, renderControl, has, toggleDefault, migrate, shareList, shareUrl, renderShared };
 })();
 window.Wish = Wish;

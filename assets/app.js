@@ -187,7 +187,7 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('#mapModal').hi
 /* ---------- reactive filtering (applies to whichever view is active) ---------- */
 function currentView(){ for(const n of VIEWS){ const el=document.getElementById('view-'+n); if(el && !el.hidden) return n; } return 'list'; }
 function updateCount(n){ if(!META) return; $('#countPill').innerHTML=`${t('results')}: <b>${fmt(n)}</b> ${t('plots_u')}` + (n!==META.totals.plots?` ${t('of_')} ${fmt(META.totals.plots)}`:''); }
-function applyFilters(){ F.page=1; renderChips(); renderCrumb(); const v=currentView(); if(v==='list') renderList(); else reRenderAnalytics(); }
+function applyFilters(){ F.page=1; renderChips(); renderCrumb(); buildAreaSelect(); const v=currentView(); if(v==='list') renderList(); else reRenderAnalytics(); }
 function renderChips(){
   if(!META) return;
   const chips=[];
@@ -253,6 +253,13 @@ function buildColChooser(){
     renderList();
   });
 }
+function buildAreaSelect(){
+  const sel=$('#areaSel'); if(!sel||!META) return;
+  const cities = (F.cities.size && F.cities.size!==ALL_CITIES.length) ? F.cities : null;
+  const blocks = [...new Set(REC.filter(r=>!cities||cities.has(r.city)).map(r=>r.block))].sort((a,b)=>String(a).localeCompare(String(b),'ar'));
+  if(F.block && blocks.indexOf(F.block)<0) F.block='';
+  sel.innerHTML = `<option value="">${t('all_areas')}</option>` + blocks.map(b=>`<option value="${String(b).replace(/"/g,'&quot;')}"${b===F.block?' selected':''}>${b}</option>`).join('');
+}
 function debounce(fn,ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; }
 function wireFilters(){
   $('#cityBtn').onclick=()=>$('#cityPanel').classList.toggle('open');
@@ -265,6 +272,7 @@ function wireFilters(){
   const bind={pMin:'#pMin',pMax:'#pMax',aMin:'#aMin',aMax:'#aMax',tMin:'#tMin',tMax:'#tMax',dMin:'#dMin',dMax:'#dMax'};
   for(const k in bind) $(bind[k]).oninput=debounce(e=>{ F[k]=e.target.value; applyFilters(); },250);
   $('#premSel').onchange=e=>{ F.prem=e.target.value; applyFilters(); };
+  $('#areaSel').onchange=e=>{ F.block=e.target.value; if(Analytics&&Analytics.setBreakdown)Analytics.setBreakdown(currentBdDim()); applyFilters(); };
   $('#searchBox').oninput=debounce(e=>{ F.q=e.target.value; applyFilters(); },250);
   $('#sortSel').onchange=e=>{ F.sort=e.target.value; F.page=1; syncSortControls(); renderList(); };
   $('#dirBtn').onclick=()=>{ F.dir=F.dir==='asc'?'desc':'asc'; F.page=1; syncSortControls(); renderList(); };
@@ -281,7 +289,9 @@ async function exportCSV(){
 }
 
 /* ---------- tabs / theme / language ---------- */
-const VIEWS=['list','analytics','premium','terms','wish','admin'];
+const VIEWS=['list','analytics','premium','terms','wish','admin','shared'];
+function sharedParams(){ const sp=new URLSearchParams(location.search); if(sp.get('wl')===null) return null; return { keys:(sp.get('wl')||'').split(',').filter(Boolean), name:sp.get('n')||'' }; }
+function renderSharedFromUrl(){ const p=sharedParams(); if(p && window.Wish && Wish.renderShared) Wish.renderShared($('#sharedBody'), p.keys, p.name); }
 async function reRenderAnalytics(){
   const v=currentView(); if(!['analytics','premium'].includes(v)) return;
   const rows=await Lands.all(params(true)); updateCount(rows.length);
@@ -292,6 +302,7 @@ async function showView(v){
   $$('.tab').forEach(el=>el.classList.toggle('on',el.dataset.view===v));
   VIEWS.forEach(n=>{ const el=document.getElementById('view-'+n); if(el) el.hidden=n!==v; });
   document.body.classList.toggle('on-list', v==='list');
+  document.body.classList.toggle('on-shared', v==='shared');
   if(v==='list'){ renderList(); }
   else if(v==='analytics'||v==='premium'){
     const rows=await Lands.all(params(true)); updateCount(rows.length);
@@ -301,6 +312,7 @@ async function showView(v){
   if(v==='terms' && window.Terms) Terms.render($('#termsBody'));
   if(v==='wish' && window.Wish) Wish.render($('#wishBody'));
   if(v==='admin' && window.Admin && Admin.render) Admin.render();
+  if(v==='shared') renderSharedFromUrl();
 }
 $$('.tab').forEach(el=>el.onclick=()=>showView(el.dataset.view));
 $('#themeBtn').onclick=()=>{ document.body.classList.toggle('dark'); $('#themeBtn').textContent=document.body.classList.contains('dark')?'☀️':'🌙'; reRenderAnalytics(); };
@@ -310,7 +322,7 @@ function applyLang(){
   $('#langBtn').textContent=I18N.t('lang_btn');
   $$('#authLang button').forEach(b=>b.classList.toggle('on', b.dataset.setlang===I18N.lang));
   if(SETTINGS) applySettings(SETTINGS);
-  if(typeof APP_INITED!=='undefined' && APP_INITED){ cityBtnTxt(); buildSortSelect(); buildColChooser(); renderFooter(); renderList(); reRenderAnalytics(); if(currentView()==='terms' && window.Terms) Terms.render($('#termsBody')); }
+  if(typeof APP_INITED!=='undefined' && APP_INITED){ cityBtnTxt(); buildSortSelect(); buildColChooser(); renderFooter(); renderList(); reRenderAnalytics(); if(currentView()==='terms' && window.Terms) Terms.render($('#termsBody')); if(currentView()==='shared') renderSharedFromUrl(); }
 }
 let SETTINGS=null;
 function applySettings(s){
@@ -342,7 +354,7 @@ async function initApp(){
   ALL_CITIES=META.cities.map(c=>c.name);
   F.cities=new Set(ALL_CITIES);
   document.body.classList.add('on-list');
-  buildCityDropdown(); cityBtnTxt(); buildSortSelect(); wireFilters(); renderFooter(); renderChips();
+  buildCityDropdown(); cityBtnTxt(); buildSortSelect(); buildAreaSelect(); wireFilters(); renderFooter(); renderChips();
   if(window.Wish){ try{ await Wish.load(); }catch(e){} }
   await renderList();
 }
@@ -361,7 +373,7 @@ function enterApp(){
   const g=$('#authGate'); if(g) g.style.display='none';
   const ua=$('#userArea'); if(ua && Auth.user){ ua.hidden=false; $('#userName').textContent=Auth.user.full_name||Auth.user.email; }
   if(Auth.user && Auth.user.role==='admin'){ const at=document.querySelector('.tab.admin-only'); if(at) at.hidden=false; if(window.Admin) Admin.user=Auth.user; }
-  initApp();
+  return initApp();
 }
 function wireAuth(){
   $$('#authLang button').forEach(b=>b.onclick=()=>{ I18N.set(b.dataset.setlang); applyLang(); });
@@ -373,5 +385,5 @@ function wireAuth(){
 }
 applyLang();
 fetch('api/admin?action=settings_get').then(r=>r.json()).then(j=>{ if(j&&j.settings) applySettings(j.settings); }).catch(()=>{});
-(async()=>{ wireAuth(); const g=$('#authGate'); if(g) g.style.display='none'; const authed=await Auth.check(); enterApp(); if(!authed) startGrace(); })();
+(async()=>{ wireAuth(); const g=$('#authGate'); if(g) g.style.display='none'; const authed=await Auth.check(); await enterApp(); if(sharedParams()) showView('shared'); if(!authed) startGrace(); })();
 window.addEventListener('resize',()=>{ if(!$('#mapModal').hidden) vFit(); });

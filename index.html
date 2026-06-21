@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@500;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/styles.css?v=12">
+<link rel="stylesheet" href="assets/styles.css?v=13">
 </head>
 <body>
 <!-- ============ REGISTRATION / LOGIN GATE ============ -->
@@ -79,6 +79,7 @@
         <div id="cityList"></div>
       </div>
     </div>
+    <div class="fg area-fg"><label data-i18n="f_district"></label><select id="areaSel"></select></div>
     <div class="fg"><label data-i18n="f_perm"></label><div class="mm"><input type="number" id="pMin" data-i18n-ph="from"><span>–</span><input type="number" id="pMax" data-i18n-ph="to"></div></div>
     <div class="fg"><label data-i18n="f_area"></label><div class="mm"><input type="number" id="aMin" data-i18n-ph="from"><span>–</span><input type="number" id="aMax" data-i18n-ph="to"></div></div>
     <div class="fg"><label data-i18n="f_total"></label><div class="mm"><input type="number" id="tMin" data-i18n-ph="from"><span>–</span><input type="number" id="tMax" data-i18n-ph="to"></div></div>
@@ -170,6 +171,11 @@
   <div id="adminBody"></div>
 </main>
 
+<!-- ============ SHARED WISHLIST VIEW (قائمة مشتركة) ============ -->
+<main id="view-shared" class="wrap view" hidden>
+  <div id="sharedBody"></div>
+</main>
+
 <!-- ============ MAP MODAL ============ -->
 <div id="mapModal" class="modal" hidden>
   <div class="modal-bg" data-close></div>
@@ -194,13 +200,13 @@
 <footer class="wrap foot" id="foot"></footer>
 
 <script src="assets/data.js?d=1"></script>
-<script src="assets/i18n.js?v=13"></script>
+<script src="assets/i18n.js?v=14"></script>
 <script src="assets/echarts.min.js"></script>
 <script src="assets/analytics.js?v=6"></script>
 <script src="assets/admin.js?v=10"></script>
 <script src="assets/terms.js?v=1"></script>
-<script src="assets/wish.js?v=3"></script>
-<script src="assets/app.js?v=15"></script>
+<script src="assets/wish.js?v=4"></script>
+<script src="assets/app.js?v=16"></script>
 <script src="assets/track.js?v=1"></script>
 </body>
 </html>

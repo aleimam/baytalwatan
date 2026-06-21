@@ -8,7 +8,9 @@
 const Wish = (() => {
   let lists = [];
   const esc = x => String(x == null ? '' : x).replace(/</g, '&lt;').replace(/"/g, '&quot;');
-  const authed = () => !!(window.Auth && Auth.user);
+  let serverOK = false;
+  const loggedIn = () => !!(window.Auth && Auth.user);
+  const useServer = () => loggedIn() && serverOK;
   const rid = () => 'L' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
   /* ---- stores ---- */
@@ -16,50 +18,47 @@ const Wish = (() => {
   function saveLocal(){ try { localStorage.setItem('bw_wish', JSON.stringify(lists)); } catch (e) {} }
   async function srv(action, data){
     const o = data ? { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) } : {};
-    try { return await (await fetch('api/wishlists' + (action ? ('?action=' + action) : ''), o)).json(); }
+    try { const r = await fetch('api/wishlists' + (action ? ('?action=' + action) : ''), o); if (!r.ok) return { error: 'http' }; return await r.json(); }
     catch (e) { return { error: 'network' }; }
   }
-
-  async function load(){
-    if (authed()) { const r = await srv(''); lists = (r && r.wishlists) || []; }
-    else { lists = loadLocal(); }
-    return lists;
+  async function pushLocalToServer(){
+    const local = loadLocal(); if (!local.length) return;
+    for (const w of local) { const r = await srv('create', { name: w.name }); const id = r && r.created; if (id) for (const p of (w.plots || [])) await srv('add', { id, plot: p }); }
+    try { localStorage.removeItem('bw_wish'); } catch (e) {}
   }
-  /* ---- mode-aware operations ---- */
+  async function load(){
+    if (loggedIn()) {
+      let r = await srv('');
+      if (r && r.wishlists) {
+        serverOK = true;
+        if (loadLocal().length) { await pushLocalToServer(); r = await srv(''); }   // recover anon/offline lists onto the account
+        lists = (r && r.wishlists) || []; return lists;
+      }
+      serverOK = false;   // backend not reachable -> work in localStorage, will sync once it is
+    }
+    lists = loadLocal(); return lists;
+  }
+  /* ---- operations: server when available, else localStorage ---- */
   async function createList(name){
     name = (name || t('wl_default')).trim() || t('wl_default');
-    if (authed()) { const r = await srv('create', { name }); if (r.wishlists) lists = r.wishlists; return r.created; }
+    if (useServer()) { const r = await srv('create', { name }); if (r && r.wishlists) { lists = r.wishlists; return r.created; } serverOK = false; }
     const w = { id: rid(), name, plots: [], created_at: new Date().toISOString() }; lists.push(w); saveLocal(); return w.id;
   }
-  async function renameList(id, name){
-    if (authed()) { const r = await srv('rename', { id, name }); if (r.wishlists) lists = r.wishlists; return; }
-    const w = lists.find(x => x.id === id); if (w) { w.name = (name || w.name).trim() || w.name; saveLocal(); }
+  async function srvOrLocal(action, data, localFn){
+    if (useServer()) { const r = await srv(action, data); if (r && r.wishlists) { lists = r.wishlists; return; } serverOK = false; }
+    localFn(); saveLocal();
   }
-  async function deleteList(id){
-    if (authed()) { const r = await srv('delete', { id }); if (r.wishlists) lists = r.wishlists; return; }
-    lists = lists.filter(w => w.id !== id); saveLocal();
-  }
-  async function addPlot(id, key){
-    if (authed()) { const r = await srv('add', { id, plot: key }); if (r.wishlists) lists = r.wishlists; return; }
-    const w = lists.find(x => x.id === id); if (w && (w.plots || (w.plots = [])).indexOf(key) < 0) { w.plots.push(key); saveLocal(); }
-  }
-  async function removePlot(id, key){
-    if (authed()) { const r = await srv('remove', { id, plot: key }); if (r.wishlists) lists = r.wishlists; return; }
-    const w = lists.find(x => x.id === id); if (w) { w.plots = (w.plots || []).filter(x => x !== key); saveLocal(); }
-  }
+  const renameList = (id, name) => srvOrLocal('rename', { id, name }, () => { const w = lists.find(x => x.id === id); if (w) w.name = (name || w.name).trim() || w.name; });
+  const deleteList = (id) => srvOrLocal('delete', { id }, () => { lists = lists.filter(w => w.id !== id); });
+  const addPlot = (id, key) => srvOrLocal('add', { id, plot: key }, () => { const w = lists.find(x => x.id === id); if (w && (w.plots || (w.plots = [])).indexOf(key) < 0) w.plots.push(key); });
+  const removePlot = (id, key) => srvOrLocal('remove', { id, plot: key }, () => { const w = lists.find(x => x.id === id); if (w) w.plots = (w.plots || []).filter(x => x !== key); });
   function has(key){ return lists.some(w => (w.plots || []).indexOf(key) >= 0); }
   async function toggleDefault(key){
     if (has(key)) { for (const w of lists.slice()) if ((w.plots || []).indexOf(key) >= 0) await removePlot(w.id, key); return false; }
     let id = lists[0] && lists[0].id; if (!id) id = await createList(t('wl_default'));
     await addPlot(id, key); return true;
   }
-  /* push anonymous (localStorage) lists onto the account after sign-in */
-  async function migrate(){
-    const local = loadLocal(); if (!local.length) return;
-    for (const w of local) { const r = await srv('create', { name: w.name }); const id = r && r.created; if (id) for (const p of (w.plots || [])) await srv('add', { id, plot: p }); }
-    try { localStorage.removeItem('bw_wish'); } catch (e) {}
-    await load();
-  }
+  const migrate = load;   // sign-in: load() pushes any local lists onto the account + reloads
 
   /* ---- add-to-wishlist control inside the plot popup ---- */
   async function renderControl(el, plotRow){
@@ -86,7 +85,7 @@ const Wish = (() => {
   async function render(el){
     if (!el) return;
     el.innerHTML = `<div class="ad-bar"><h2 class="section-title" style="margin:0">${t('tab_wish')}</h2><span class="spacer"></span><button class="btn solid" id="wlAdd">★ ${t('wl_new')}</button></div>
-      ${authed() ? '' : `<div class="terms-note">${t('wl_anon_note')}</div>`}<div id="wlBody"><span class="c-muted">${t('vs_loading')}</span></div>`;
+      ${loggedIn() ? '' : `<div class="terms-note">${t('wl_anon_note')}</div>`}<div id="wlBody"><span class="c-muted">${t('vs_loading')}</span></div>`;
     el.querySelector('#wlAdd').onclick = async () => { const name = prompt(t('wl_new_prompt')); if (name === null) return; await createList(name); drawBody(); };
     await load(); drawBody();
     function drawBody(){

@@ -158,6 +158,7 @@ function openMap(r){
     <a class="br-link" id="brLink">↗ ${t('br_seeterms')}</a>` : '';
   $('#plotInfo').innerHTML=`
     <h4>${t('m_plotno')}</h4><div class="big">${r.plot}</div>
+    <div id="wishControl" class="wish-control wish-top"></div>
     <h4>${t('m_location')}</h4>
     <div class="kv"><span>${t('t_city')}</span><span>${r.city}</span></div>
     <div class="kv"><span>${t('t_block')}</span><span>${r.block}</span></div>
@@ -172,8 +173,7 @@ function openMap(r){
     <div class="kv"><span>${t('p_garden')}</span><span>${r.garden>0?fmt(r.garden):'—'}</span></div>
     <div class="kv"><span>${t('p_sea')}</span><span>${r.sea>0?fmt(r.sea):'—'}</span></div>
     ${brBlock}
-    <div class="locate">📍 ${t('m_locate')}</div>
-    <div id="wishControl" class="wish-control"></div>`;
+    <div class="locate">📍 ${t('m_locate')}</div>`;
   const bl=$('#brLink'); if(bl) bl.onclick=()=>{ closeMap(); showView('terms'); };
   if(window.Wish) Wish.renderControl($('#wishControl'), r);
   $('#mapModal').hidden=false;

@@ -347,7 +347,7 @@ async function initApp(){
   await renderList();
 }
 /* ---------- 60-second grace period before the gate ---------- */
-const GRACE_MS=60000; let GRACE_TIMER=null;
+const GRACE_MS=180000; let GRACE_TIMER=null;
 function showGate(){ if(Auth.user) return; const g=$('#authGate'); if(g) g.style.display=''; }
 function startGrace(){
   let started=+(sessionStorage.getItem('bw_grace_start')||0);

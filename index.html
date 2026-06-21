@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@500;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/styles.css?v=17">
+<link rel="stylesheet" href="assets/styles.css?v=18">
 </head>
 <body>
 <!-- ============ REGISTRATION / LOGIN GATE ============ -->
@@ -54,12 +54,14 @@
       </div>
     </div>
     <nav class="tabs">
-      <button class="tab on" data-view="list" data-i18n="tab_list"></button>
-      <button class="tab" data-view="analytics" data-i18n="tab_analytics"></button>
-      <button class="tab" data-view="premium" data-i18n="tab_premium"></button>
-      <button class="tab" data-view="terms" data-i18n="tab_terms"></button>
-      <button class="tab" data-view="wish" data-i18n="tab_wish"></button>
-      <button class="tab admin-only" data-view="admin" data-i18n="tab_admin" hidden></button>
+      <div class="tab-views">
+        <button class="tab on" data-view="list" data-i18n="tab_list"></button>
+        <button class="tab" data-view="analytics" data-i18n="tab_analytics"></button>
+        <button class="tab" data-view="premium" data-i18n="tab_premium"></button>
+        <button class="tab" data-view="terms" data-i18n="tab_terms"></button>
+        <button class="tab" data-view="wish" data-i18n="tab_wish"></button>
+        <button class="tab admin-only" data-view="admin" data-i18n="tab_admin" hidden></button>
+      </div>
       <span class="user-area" id="userArea" hidden><span class="user-name" id="userName"></span><button class="btn ghost" id="logoutBtn" data-i18n="logout"></button></span>
       <button class="btn ghost" id="langBtn" title="Language / اللغة">EN</button>
       <button class="btn ghost" id="themeBtn" data-i18n-title="theme">🌙</button>

@@ -4,7 +4,8 @@ const NUMCOLS = ['zone_id','plot','area','base_per_m','corner','garden','sea','t
 const fmt = n => (n==null||n===''||isNaN(n)) ? '—' : Math.round(Number(n)).toLocaleString('en-US');
 const fmt1 = n => (n==null||isNaN(n)) ? '—' : Number(n).toLocaleString('en-US',{maximumFractionDigits:1});
 const compact = n => { n=Number(n); const a=Math.abs(n); if(a>=1e9)return (n/1e9).toFixed(2)+'B'; if(a>=1e6)return (n/1e6).toFixed(1)+'M'; if(a>=1e3)return (n/1e3).toFixed(0)+'K'; return Math.round(n).toString(); };
-function normalize(r){ NUMCOLS.forEach(c=>{ if(r[c]!=null) r[c]=Number(r[c]); }); r.premCount=(r.corner>0?1:0)+(r.garden>0?1:0)+(r.sea>0?1:0); return r; }
+let AVAIL = {};   // plotKey -> 'reserved' (loaded from assets/availability.json; anything absent = 'available')
+function normalize(r){ NUMCOLS.forEach(c=>{ if(r[c]!=null) r[c]=Number(r[c]); }); r.premCount=(r.corner>0?1:0)+(r.garden>0?1:0)+(r.sea>0?1:0); r.status=(AVAIL[r.zone_id+'-'+r.plot]==='reserved')?'reserved':'available'; return r; }
 
 /* ---------- local (static) engine over data.js ---------- */
 const COLS = window.LANDS_COLS || [];
@@ -12,6 +13,13 @@ const REC = (window.LANDS_ROWS || []).map((row,i)=>{ const o={id:i}; COLS.forEac
 const plotKey = r => r.zone_id+'-'+r.plot;
 const plotByKey = {}; REC.forEach(r=>{ plotByKey[plotKey(r)]=r; });
 window.plotKey = plotKey; window.plotByKey = plotByKey;
+/* ---------- availability (static, editable file) ---------- */
+function applyAvailability(){ REC.forEach(r=>{ r.status = (AVAIL[plotKey(r)]==='reserved') ? 'reserved' : 'available'; }); }
+async function loadAvailability(){
+  try{ const res=await fetch('assets/availability.json?t='+Date.now(),{cache:'no-store'}); if(res.ok){ const j=await res.json(); if(j&&typeof j==='object') AVAIL=j; } }catch(e){ AVAIL={}; }
+  applyAvailability();
+}
+applyAvailability();   // default everything to 'available' until the file loads
 function localMeta(){
   const cityMap={};
   REC.forEach(r=>{ (cityMap[r.city]=cityMap[r.city]||{name:r.city,en:r.city_en,count:0,value:0,area:0}); const o=cityMap[r.city]; o.count++; o.value+=r.total_price; o.area+=r.area; });
@@ -27,6 +35,7 @@ function localFilter(p){
   return REC.filter(r=>{
     if(cities && !cities.has(r.city)) return false;
     if(p.block && r.block!==p.block) return false;
+    if(p.avail && (r.status||'available')!==p.avail) return false;
     if(p.pmin!=null&&p.pmin!==''&&r.total_per_m<+p.pmin) return false;
     if(p.pmax!=null&&p.pmax!==''&&r.total_per_m>+p.pmax) return false;
     if(p.amin!=null&&p.amin!==''&&r.area<+p.amin) return false;
@@ -62,11 +71,15 @@ const Lands = {
 };
 
 /* ---------- filter state ---------- */
-const F = {cities:new Set(), block:'', pMin:'',pMax:'',aMin:'',aMax:'',tMin:'',tMax:'',dMin:'',dMax:'',prem:'',q:'',sort:'total_price',dir:'desc',page:1,per:50};
+const F = {cities:new Set(), block:'', avail:'', pMin:'',pMax:'',aMin:'',aMax:'',tMin:'',tMax:'',dMin:'',dMax:'',prem:'',q:'',sort:'total_price',dir:'desc',page:1,per:50};
 let META=null, ALL_CITIES=[], curRows=[];
 const SORTCOLS=[['total_price','s_total'],['total_per_m','s_perm'],['premium','s_premium'],['area','s_area'],['plot','s_plot'],['city','s_city'],['zone_id','s_zone'],['base_per_m','s_base'],['down_payment','s_down'],['corner','s_corner'],['garden','s_garden'],['sea','s_sea']];
-const TCOLS=[['wish','t_wish'],['city','t_city'],['block','t_block'],['plot','t_plot'],['area','t_area'],['base_per_m','t_base'],['prem','t_prem'],['total_per_m','t_perm'],['total_price','t_total'],['down_payment','t_down'],['map','t_map']];
-let colVis = (function(){ try{ const s=JSON.parse(localStorage.getItem('bw_cols')); if(Array.isArray(s)&&s.length){ const set=new Set(s.filter(k=>TCOLS.some(c=>c[0]===k))); if(!localStorage.getItem('bw_cols_wish')){ set.add('wish'); try{localStorage.setItem('bw_cols_wish','1'); localStorage.setItem('bw_cols',JSON.stringify([...set]));}catch(e){} } return set; } }catch(e){} return new Set(TCOLS.map(c=>c[0])); })();
+const TCOLS=[['wish','t_wish'],['city','t_city'],['block','t_block'],['plot','t_plot'],['status','t_status'],['area','t_area'],['base_per_m','t_base'],['prem','t_prem'],['total_per_m','t_perm'],['total_price','t_total'],['down_payment','t_down'],['map','t_map']];
+let colVis = (function(){ try{ const s=JSON.parse(localStorage.getItem('bw_cols')); if(Array.isArray(s)&&s.length){ const set=new Set(s.filter(k=>TCOLS.some(c=>c[0]===k)));
+  if(!localStorage.getItem('bw_cols_wish')){ set.add('wish'); try{localStorage.setItem('bw_cols_wish','1');}catch(e){} }
+  if(!localStorage.getItem('bw_cols_status')){ set.add('status'); try{localStorage.setItem('bw_cols_status','1');}catch(e){} }
+  try{localStorage.setItem('bw_cols',JSON.stringify([...set]));}catch(e){}
+  return set; } }catch(e){} return new Set(TCOLS.map(c=>c[0])); })();
 const visTCOLS = () => TCOLS.filter(c=>colVis.has(c[0]));
 function premTags(r){ return [r.corner>0?`<span class="tag cor">${t('tag_corner')}</span>`:'',r.garden>0?`<span class="tag gar">${t('tag_garden')}</span>`:'',r.sea>0?`<span class="tag sea">${t('tag_sea')}</span>`:''].join('')||'<span class="c-muted">—</span>'; }
 function cellFor(r,k,i){ switch(k){
@@ -74,6 +87,7 @@ function cellFor(r,k,i){ switch(k){
   case 'city': return `<td class="c-muted">${r.city}</td>`;
   case 'block': return `<td class="c-muted">${r.block}</td>`;
   case 'plot': return `<td><a class="plotlink" data-i="${i}" title="${t('show_map')}">🗺️ ${r.plot}</a></td>`;
+  case 'status': { const s=r.status||'available'; return `<td><span class="stat stat-${s}">${t('st_'+s)}</span></td>`; }
   case 'area': return `<td>${fmt1(r.area)}</td>`;
   case 'base_per_m': return `<td>${fmt(r.base_per_m)}</td>`;
   case 'prem': return `<td>${premTags(r)}</td>`;
@@ -87,6 +101,7 @@ function cellFor(r,k,i){ switch(k){
 function params(forAll){
   const p={}; if(F.cities.size && F.cities.size!==ALL_CITIES.length) p.cities=[...F.cities].join(',');
   if(F.block) p.block=F.block;
+  if(F.avail) p.avail=F.avail;
   const mp={pMin:'pmin',pMax:'pmax',aMin:'amin',aMax:'amax',tMin:'tmin',tMax:'tmax',dMin:'dmin',dMax:'dmax'};
   for(const k in mp) if(F[k]!=='') p[mp[k]]=F[k];
   if(F.prem)p.prem=F.prem; if(F.q)p.q=F.q; p.sort=F.sort; p.dir=F.dir;
@@ -108,7 +123,7 @@ async function renderList(){
     return `<th data-k="${k}" ${sortable?'':'style="cursor:default"'} title="${sortable?t('click_sort'):''}">${t(lbl)}${ar}</th>`;
   }).join('')+'</tr>';
   // body
-  $('#tbl tbody').innerHTML = curRows.map((r,i)=>'<tr>'+cols.map(([k])=>cellFor(r,k,i)).join('')+'</tr>').join('')
+  $('#tbl tbody').innerHTML = curRows.map((r,i)=>`<tr${(r.status||'available')==='reserved'?' class="row-reserved"':''}>`+cols.map(([k])=>cellFor(r,k,i)).join('')+'</tr>').join('')
     || `<tr><td colspan="${cols.length}" style="text-align:center;padding:30px;color:var(--muted)">${t('no_results')}</td></tr>`;
   $$('#tbl .plotlink').forEach(a=>a.onclick=()=>openMap(curRows[+a.dataset.i]));
   $$('#tbl .wish-heart').forEach(b=>b.onclick=e=>{ e.stopPropagation(); openWishPop(b, b.dataset.wk); });
@@ -187,12 +202,16 @@ function openMap(r){
     <div class="kv"><span>${t('br_setbacks')}</span><span>${br.f} / ${br.b} / ${br.s} م</span></div>
     <div class="kv"><span class="c-muted" style="font-size:11px">${t('br_fbs')}</span><span></span></div>
     <a class="br-link" id="brLink">↗ ${t('br_seeterms')}</a>` : '';
+  const st=r.status||'available';
+  const adminCode = (Auth.user&&Auth.user.role==='admin') ? `<div class="kv"><span class="c-muted" style="font-size:11px">${t('m_avail_code')}</span><span class="avail-code">"${plotKey(r)}": "reserved"</span></div>` : '';
   $('#plotInfo').innerHTML=`
     <h4>${t('m_plotno')}</h4><div class="big">${r.plot}</div>
+    <div class="m-status"><span class="stat stat-${st}">${t('st_'+st)}</span></div>
     <div id="wishControl" class="wish-control wish-top"></div>
     <h4>${t('m_location')}</h4>
     <div class="kv"><span>${t('t_city')}</span><span>${r.city}</span></div>
     <div class="kv"><span>${t('t_block')}</span><span>${r.block}</span></div>
+    ${adminCode}
     <h4>${t('m_areaprice')}</h4>
     <div class="kv"><span>${t('t_area')}</span><span>${fmt1(r.area)} م²</span></div>
     <div class="kv"><span>${t('t_base')}</span><span>${fmt(r.base_per_m)}</span></div>
@@ -305,17 +324,18 @@ function wireFilters(){
   const bind={pMin:'#pMin',pMax:'#pMax',aMin:'#aMin',aMax:'#aMax',tMin:'#tMin',tMax:'#tMax',dMin:'#dMin',dMax:'#dMax'};
   for(const k in bind) $(bind[k]).oninput=debounce(e=>{ F[k]=e.target.value; applyFilters(); },250);
   $('#premSel').onchange=e=>{ F.prem=e.target.value; applyFilters(); };
+  $('#availSel').onchange=e=>{ F.avail=e.target.value; applyFilters(); };
   $('#areaSel').onchange=e=>{ F.block=e.target.value; if(Analytics&&Analytics.setBreakdown)Analytics.setBreakdown(currentBdDim()); applyFilters(); };
   $('#searchBox').oninput=debounce(e=>{ F.q=e.target.value; applyFilters(); },250);
   $('#sortSel').onchange=e=>{ F.sort=e.target.value; F.page=1; syncSortControls(); renderList(); };
   $('#dirBtn').onclick=()=>{ F.dir=F.dir==='asc'?'desc':'asc'; F.page=1; syncSortControls(); renderList(); };
   $('#perSel').onchange=e=>{ F.per=+e.target.value; F.page=1; renderList(); };
-  $('#resetBtn').onclick=()=>{ Object.assign(F,{cities:new Set(ALL_CITIES),block:'',pMin:'',pMax:'',aMin:'',aMax:'',tMin:'',tMax:'',dMin:'',dMax:'',prem:'',q:'',sort:'total_price',dir:'desc',page:1}); ['#pMin','#pMax','#aMin','#aMax','#tMin','#tMax','#dMin','#dMax','#searchBox'].forEach(s=>$(s).value=''); $('#premSel').value=''; if(Analytics&&Analytics.setBreakdown)Analytics.setBreakdown('city'); buildCityDropdown(); cityBtnTxt(); buildSortSelect(); applyFilters(); };
+  $('#resetBtn').onclick=()=>{ Object.assign(F,{cities:new Set(ALL_CITIES),block:'',avail:'',pMin:'',pMax:'',aMin:'',aMax:'',tMin:'',tMax:'',dMin:'',dMax:'',prem:'',q:'',sort:'total_price',dir:'desc',page:1}); ['#pMin','#pMax','#aMin','#aMax','#tMin','#tMax','#dMin','#dMax','#searchBox'].forEach(s=>$(s).value=''); $('#premSel').value=''; const av=$('#availSel'); if(av)av.value=''; if(Analytics&&Analytics.setBreakdown)Analytics.setBreakdown('city'); buildCityDropdown(); cityBtnTxt(); buildSortSelect(); applyFilters(); };
   $('#exportBtn').onclick=exportCSV;
 }
 async function exportCSV(){
   const rows=await Lands.all(params(true));
-  const cols=['city','project','zone_id','block','plot','area','base_per_m','corner','garden','sea','total_per_m','total_price','down_payment'];
+  const cols=['city','project','zone_id','block','plot','status','area','base_per_m','corner','garden','sea','total_per_m','total_price','down_payment'];
   const q=v=>'"'+String(v).replace(/"/g,'""')+'"';
   const csv='﻿'+cols.join(',')+'\r\n'+rows.map(r=>cols.map(c=>(typeof r[c]==='number'||/^[\d.]+$/.test(r[c]))?r[c]:q(r[c])).join(',')).join('\r\n');
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download='NUCA_lands_filtered.csv'; a.click();
@@ -388,6 +408,7 @@ async function initApp(){
   F.cities=new Set(ALL_CITIES);
   document.body.classList.add('on-list');
   buildCityDropdown(); cityBtnTxt(); buildSortSelect(); buildAreaSelect(); wireFilters(); renderFooter(); renderChips();
+  await loadAvailability();
   if(window.Wish){ try{ await Wish.load(); }catch(e){} }
   await renderList();
 }

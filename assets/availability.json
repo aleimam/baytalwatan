@@ -1,0 +1,3 @@
+{
+  "__readme__": "Plot availability overrides. Any plot NOT listed here is AVAILABLE (متاح). To mark a plot RESERVED (محجوز), add one line:  \"<zone_id>-<plot>\": \"reserved\"  — for example  \"3625-100\": \"reserved\". The exact line to paste is shown in each plot's popup when you are signed in as admin. Save the file; it takes effect on the next page load — no redeploy and no cache wait needed (you can edit it directly on the server). Keys starting with _ are ignored."
+}

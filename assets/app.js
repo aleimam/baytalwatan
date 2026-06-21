@@ -23,6 +23,7 @@ function localFilter(p){
   const q = p.q? String(p.q).toLowerCase() : null;
   return REC.filter(r=>{
     if(cities && !cities.has(r.city)) return false;
+    if(p.block && r.block!==p.block) return false;
     if(p.pmin!=null&&p.pmin!==''&&r.total_per_m<+p.pmin) return false;
     if(p.pmax!=null&&p.pmax!==''&&r.total_per_m>+p.pmax) return false;
     if(p.amin!=null&&p.amin!==''&&r.area<+p.amin) return false;
@@ -58,13 +59,14 @@ const Lands = {
 };
 
 /* ---------- filter state ---------- */
-const F = {cities:new Set(), pMin:'',pMax:'',aMin:'',aMax:'',tMin:'',tMax:'',dMin:'',dMax:'',prem:'',q:'',sort:'total_price',dir:'desc',page:1,per:50};
+const F = {cities:new Set(), block:'', pMin:'',pMax:'',aMin:'',aMax:'',tMin:'',tMax:'',dMin:'',dMax:'',prem:'',q:'',sort:'total_price',dir:'desc',page:1,per:50};
 let META=null, ALL_CITIES=[], curRows=[];
 const SORTCOLS=[['total_price','s_total'],['total_per_m','s_perm'],['premium','s_premium'],['area','s_area'],['plot','s_plot'],['city','s_city'],['zone_id','s_zone'],['base_per_m','s_base'],['down_payment','s_down'],['corner','s_corner'],['garden','s_garden'],['sea','s_sea']];
 const TCOLS=[['city','t_city'],['block','t_block'],['plot','t_plot'],['area','t_area'],['base_per_m','t_base'],['prem','t_prem'],['total_per_m','t_perm'],['total_price','t_total'],['down_payment','t_down'],['map','t_map']];
 
 function params(forAll){
   const p={}; if(F.cities.size && F.cities.size!==ALL_CITIES.length) p.cities=[...F.cities].join(',');
+  if(F.block) p.block=F.block;
   const mp={pMin:'pmin',pMax:'pmax',aMin:'amin',aMax:'amax',tMin:'tmin',tMax:'tmax',dMin:'dmin',dMax:'dmax'};
   for(const k in mp) if(F[k]!=='') p[mp[k]]=F[k];
   if(F.prem)p.prem=F.prem; if(F.q)p.q=F.q; p.sort=F.sort; p.dir=F.dir;
@@ -161,11 +163,12 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('#mapModal').hi
 /* ---------- reactive filtering (applies to whichever view is active) ---------- */
 function currentView(){ for(const n of VIEWS){ const el=document.getElementById('view-'+n); if(el && !el.hidden) return n; } return 'list'; }
 function updateCount(n){ if(!META) return; $('#countPill').innerHTML=`${t('results')}: <b>${fmt(n)}</b> ${t('plots_u')}` + (n!==META.totals.plots?` ${t('of_')} ${fmt(META.totals.plots)}`:''); }
-function applyFilters(){ F.page=1; renderChips(); const v=currentView(); if(v==='list') renderList(); else reRenderAnalytics(); }
+function applyFilters(){ F.page=1; renderChips(); renderCrumb(); const v=currentView(); if(v==='list') renderList(); else reRenderAnalytics(); }
 function renderChips(){
   if(!META) return;
   const chips=[];
-  if(F.cities.size && F.cities.size!==ALL_CITIES.length) chips.push([`${t('f_city')}: ${F.cities.size===1?[...F.cities][0]:F.cities.size}`,()=>{F.cities=new Set(ALL_CITIES);buildCityDropdown();cityBtnTxt();}]);
+  if(F.cities.size && F.cities.size!==ALL_CITIES.length) chips.push([`${t('f_city')}: ${F.cities.size===1?[...F.cities][0]:F.cities.size}`,()=>{F.cities=new Set(ALL_CITIES);F.block='';buildCityDropdown();cityBtnTxt();if(window.Analytics&&Analytics.setBreakdown)Analytics.setBreakdown(currentBdDim());}]);
+  if(F.block) chips.push([`${t('t_block')}: ${F.block}`,()=>{F.block='';if(window.Analytics&&Analytics.setBreakdown)Analytics.setBreakdown(currentBdDim());}]);
   const rng=(a,b,lbl)=>{ if(F[a]!==''||F[b]!=='') chips.push([`${lbl}: ${F[a]||'…'}–${F[b]||'…'}`,()=>{F[a]='';F[b]='';$('#'+a).value='';$('#'+b).value='';}]); };
   rng('pMin','pMax',t('f_perm')); rng('aMin','aMax',t('f_area')); rng('tMin','tMax',t('f_total')); rng('dMin','dMax',t('f_down'));
   if(F.prem){ const o=$('#premSel').selectedOptions[0]; chips.push([`${t('f_premium')}: ${o?o.textContent:F.prem}`,()=>{F.prem='';$('#premSel').value='';}]); }
@@ -174,9 +177,35 @@ function renderChips(){
   el.innerHTML=chips.map((c,i)=>`<span class="chip" data-i="${i}">${c[0]} <b>✕</b></span>`).join('');
   el.querySelectorAll('.chip').forEach(ch=>ch.onclick=()=>{ chips[+ch.dataset.i][1](); applyFilters(); });
 }
+/* ---------- drill cascade: City → Block → plots (breakdown auto-advances) ---------- */
+function currentBdDim(){ return F.cities.size!==1 ? 'city' : 'block'; }   // not-one-city → city level; one city → its blocks
+function cascadeDrill(dim,key){
+  if(dim==='city'){ F.cities=new Set([key]); buildCityDropdown(); cityBtnTxt(); F.block=''; }
+  else if(dim==='block'){ F.block=key; }
+  if(window.Analytics && Analytics.setBreakdown) Analytics.setBreakdown(currentBdDim());
+  applyFilters();
+}
+function cascadePop(level){            // -1 = all, 0 = city, 1 = block
+  if(level<1) F.block='';
+  if(level<0){ F.cities=new Set(ALL_CITIES); buildCityDropdown(); cityBtnTxt(); }
+  if(window.Analytics && Analytics.setBreakdown) Analytics.setBreakdown(currentBdDim());
+  applyFilters();
+}
+function renderCrumb(){
+  const el=$('#drillCrumb'); if(!el) return;
+  const segs=[{label:t('crumb_all'),level:-1}];
+  if(F.cities.size===1) segs.push({label:[...F.cities][0],level:0});
+  if(F.block) segs.push({label:F.block,level:1});
+  if(segs.length===1){ el.style.display='none'; el.innerHTML=''; return; }
+  el.style.display='';
+  el.innerHTML = segs.map((s,i)=>`<span class="crumb-seg${i===segs.length-1?' on':''}" data-level="${s.level}">${i===0?'🏠 ':''}${s.label}</span>`).join('<span class="crumb-sep">‹</span>')
+    + (F.block?` <a class="crumb-plots" id="crumbPlots">${t('view_plots')} ↗</a>`:'');
+  el.querySelectorAll('.crumb-seg').forEach(s=>s.onclick=()=>cascadePop(+s.dataset.level));
+  const cp=el.querySelector('#crumbPlots'); if(cp) cp.onclick=()=>showView('list');
+}
 window.onDrill=function(dim,key,range){
-  if(dim==='city'){ F.cities=new Set([key]); buildCityDropdown(); cityBtnTxt(); }
-  else if(dim==='block'||dim==='project'){ F.q=key; $('#searchBox').value=key; }
+  if(dim==='city'||dim==='block'){ cascadeDrill(dim,key); return; }
+  if(dim==='project'){ F.q=key; $('#searchBox').value=key; }
   else if(dim==='premium'){ F.prem = key==='0'?'none':'any'; $('#premSel').value=F.prem; }
   else if(dim==='premtype'){ F.prem = key; $('#premSel').value=key; }
   else if(range){ const map={price:['pMin','pMax'],total:['tMin','tMax'],area:['aMin','aMax'],down:['dMin','dMax']}; const mm=map[dim]; if(mm){ F[mm[0]]=range[0]; F[mm[1]]=range[1]>=1e9?'':range[1]; $('#'+mm[0]).value=F[mm[0]]; $('#'+mm[1]).value=F[mm[1]]; } }
@@ -203,7 +232,7 @@ function wireFilters(){
   $('#sortSel').onchange=e=>{ F.sort=e.target.value; F.page=1; syncSortControls(); renderList(); };
   $('#dirBtn').onclick=()=>{ F.dir=F.dir==='asc'?'desc':'asc'; F.page=1; syncSortControls(); renderList(); };
   $('#perSel').onchange=e=>{ F.per=+e.target.value; F.page=1; renderList(); };
-  $('#resetBtn').onclick=()=>{ Object.assign(F,{cities:new Set(ALL_CITIES),pMin:'',pMax:'',aMin:'',aMax:'',tMin:'',tMax:'',dMin:'',dMax:'',prem:'',q:'',sort:'total_price',dir:'desc',page:1}); ['#pMin','#pMax','#aMin','#aMax','#tMin','#tMax','#dMin','#dMax','#searchBox'].forEach(s=>$(s).value=''); $('#premSel').value=''; buildCityDropdown(); cityBtnTxt(); buildSortSelect(); applyFilters(); };
+  $('#resetBtn').onclick=()=>{ Object.assign(F,{cities:new Set(ALL_CITIES),block:'',pMin:'',pMax:'',aMin:'',aMax:'',tMin:'',tMax:'',dMin:'',dMax:'',prem:'',q:'',sort:'total_price',dir:'desc',page:1}); ['#pMin','#pMax','#aMin','#aMax','#tMin','#tMax','#dMin','#dMax','#searchBox'].forEach(s=>$(s).value=''); $('#premSel').value=''; if(window.Analytics&&Analytics.setBreakdown)Analytics.setBreakdown('city'); buildCityDropdown(); cityBtnTxt(); buildSortSelect(); applyFilters(); };
   $('#exportBtn').onclick=exportCSV;
 }
 async function exportCSV(){

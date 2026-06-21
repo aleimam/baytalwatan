@@ -81,9 +81,10 @@ const Analytics = (() => {
   function seg(){
     const S=[['< 150K',0,15e4],['150K–300K',15e4,3e5],['300K–500K',3e5,5e5],['500K–1M',5e5,1e6],['≥ 1M',1e6,Infinity]];
     const c=S.map(s=>DATA.filter(r=>r.total_price>=s[1]&&r.total_price<s[2]).length);
-    mk('cSeg').setOption({tooltip:tip({trigger:'item',formatter:p=>`${p.name}<br><b>${fmt(p.value)}</b> (${p.percent}%)`}),
+    const cS=mk('cSeg'); cS.setOption({tooltip:tip({trigger:'item',formatter:p=>`${p.name}<br><b>${fmt(p.value)}</b> (${p.percent}%)`}),
       legend:{bottom:0,textStyle:{color:txc(),fontSize:11},itemWidth:11,itemHeight:11},
-      series:[{type:'pie',radius:['42%','70%'],center:['50%','44%'],itemStyle:{borderColor:css('--card'),borderWidth:2},label:{show:true,color:txc(),fontSize:11,formatter:p=>p.percent>=4?p.name:''},data:S.map((s,i)=>({name:s[0],value:c[i],itemStyle:{color:PALETTE[i]}}))}]},true);
+      series:[{type:'pie',radius:['42%','70%'],center:['50%','44%'],cursor:'pointer',itemStyle:{borderColor:css('--card'),borderWidth:2},label:{show:true,color:txc(),fontSize:11,formatter:p=>p.percent>=4?p.name:''},data:S.map((s,i)=>({name:s[0],value:c[i],itemStyle:{color:PALETTE[i]}}))}]},true);
+    cS.off('click'); cS.on('click',p=>{ const s=S[p.dataIndex]; if(s&&window.onDrill) window.onDrill('total',s[0],[s[1],s[2]]); });
   }
   function tree(){
     const bc={}; DATA.forEach(r=>{ (bc[r.city]=bc[r.city]||{}); bc[r.city][r.project]=(bc[r.city][r.project]||0)+r.total_price; });
@@ -93,18 +94,20 @@ const Analytics = (() => {
   }
   function prem(){
     const cor=DATA.filter(r=>r.corner>0).length,gar=DATA.filter(r=>r.garden>0).length,sea=DATA.filter(r=>r.sea>0).length,none=DATA.filter(r=>!r.has_premium).length;
-    mk('cPrem').setOption({grid:Object.assign({},grid,{right:42}),tooltip:tip({trigger:'axis',axisPointer:{type:'shadow'},formatter:p=>`${p[0].name}: <b>${fmt(p[0].value)}</b>`}),
+    const cP=mk('cPrem'); cP.setOption({grid:Object.assign({},grid,{right:42}),tooltip:tip({trigger:'axis',axisPointer:{type:'shadow'},formatter:p=>`${p[0].name}: <b>${fmt(p[0].value)}</b>`}),
       xAxis:{type:'value',axisLabel:{color:axc(),formatter:compact},splitLine:{lineStyle:{color:css('--line2')}}},
       yAxis:{type:'category',data:['ناصية','حدائق','بحر/نيل','بدون'],axisLabel:{color:txc()},axisLine:{lineStyle:{color:css('--line')}}},
-      series:[{type:'bar',barMaxWidth:24,label:{show:true,position:'right',color:txc(),fontSize:11,formatter:p=>fmt(p.value)},data:[{value:cor,itemStyle:{color:'#cca248',borderRadius:[0,6,6,0]}},{value:gar,itemStyle:{color:'#307e30',borderRadius:[0,6,6,0]}},{value:sea,itemStyle:{color:'#3b6fb0',borderRadius:[0,6,6,0]}},{value:none,itemStyle:{color:'#9aa6bb',borderRadius:[0,6,6,0]}}]}]},true);
+      series:[{type:'bar',barMaxWidth:24,cursor:'pointer',label:{show:true,position:'right',color:txc(),fontSize:11,formatter:p=>fmt(p.value)},data:[{value:cor,itemStyle:{color:'#cca248',borderRadius:[0,6,6,0]}},{value:gar,itemStyle:{color:'#307e30',borderRadius:[0,6,6,0]}},{value:sea,itemStyle:{color:'#3b6fb0',borderRadius:[0,6,6,0]}},{value:none,itemStyle:{color:'#9aa6bb',borderRadius:[0,6,6,0]}}]}]},true);
+    cP.off('click'); cP.on('click',p=>{ const k=['corner','garden','sea','none'][p.dataIndex]; if(k&&window.onDrill) window.onDrill('premtype',k); });
   }
   function scatter(){
     const cities=[...new Set(DATA.map(r=>r.city))];
-    mk('cScatter').setOption({grid:Object.assign({},grid,{right:22,top:12}),
-      tooltip:tip({trigger:'item',formatter:p=>{const r=p.data[2];return `<b>${r.city}</b> — ${r.block}<br>قطعة ${r.plot}<br>مساحة <b>${fmt(r.area)}</b> م²<br>إجمالي <b>${fmt(r.total_price)}</b>`;}}),
+    const cSc=mk('cScatter'); cSc.setOption({grid:Object.assign({},grid,{right:22,top:12}),
+      tooltip:tip({trigger:'item',formatter:p=>{const r=p.data[2];return `<b>${r.city}</b> — ${r.block}<br>قطعة ${r.plot}<br>مساحة <b>${fmt(r.area)}</b> م²<br>إجمالي <b>${fmt(r.total_price)}</b><br><span style="opacity:.7">${t('click_map_hint')}</span>`;}}),
       xAxis:{type:'value',name:'المساحة م²',nameTextStyle:{color:axc()},axisLabel:{color:axc(),formatter:compact},splitLine:{lineStyle:{color:css('--line2')}}},
       yAxis:{type:'value',name:'السعر',nameTextStyle:{color:axc()},axisLabel:{color:axc(),formatter:compact},splitLine:{lineStyle:{color:css('--line2')}}},
-      series:cities.map(ct=>({name:ct,type:'scatter',symbolSize:7,itemStyle:{color:CITY_COLOR[ct],opacity:.72},data:DATA.filter(r=>r.city===ct).map(r=>[r.area,r.total_price,r])}))},true);
+      series:cities.map(ct=>({name:ct,type:'scatter',symbolSize:7,cursor:'pointer',itemStyle:{color:CITY_COLOR[ct],opacity:.72},data:DATA.filter(r=>r.city===ct).map(r=>[r.area,r.total_price,r])}))},true);
+    cSc.off('click'); cSc.on('click',p=>{ const r=p.data&&p.data[2]; if(r&&window.openMap) window.openMap(r); });
   }
   function hist(id,vals,color){
     if(!vals.length){ mk(id).setOption({},true); return; }
@@ -172,21 +175,24 @@ const Analytics = (() => {
     hist('dpHist', downs, '#307e30');
     const B=[['< 50K',0,5e4],['50K–100K',5e4,1e5],['100K–200K',1e5,2e5],['200K–500K',2e5,5e5],['≥ 500K',5e5,Infinity]];
     const counts=B.map(b=>d.filter(r=>r.down_payment>=b[1]&&r.down_payment<b[2]).length);
-    mk('dpBrackets').setOption({tooltip:tip({trigger:'item',formatter:p=>`${p.name}<br><b>${fmt(p.value)}</b> (${p.percent}%)`}),
+    const cDB=mk('dpBrackets'); cDB.setOption({tooltip:tip({trigger:'item',formatter:p=>`${p.name}<br><b>${fmt(p.value)}</b> (${p.percent}%)`}),
       legend:{bottom:0,textStyle:{color:txc(),fontSize:11},itemWidth:11,itemHeight:11},
-      series:[{type:'pie',radius:['42%','70%'],center:['50%','44%'],itemStyle:{borderColor:css('--card'),borderWidth:2},label:{show:false},data:B.map((b,i)=>({name:b[0],value:counts[i],itemStyle:{color:PALETTE[i]}}))}]},true);
+      series:[{type:'pie',radius:['42%','70%'],center:['50%','44%'],cursor:'pointer',itemStyle:{borderColor:css('--card'),borderWidth:2},label:{show:false},data:B.map((b,i)=>({name:b[0],value:counts[i],itemStyle:{color:PALETTE[i]}}))}]},true);
+    cDB.off('click'); cDB.on('click',p=>{ const b=B[p.dataIndex]; if(b&&window.onDrill) window.onDrill('down',b[0],[b[1],b[2]]); });
     const byc={}; d.forEach(r=>{ (byc[r.city]=byc[r.city]||{s:0,n:0}); byc[r.city].s+=r.down_payment; byc[r.city].n++; });
     const arr=Object.entries(byc).map(([c,o])=>({c,v:o.s/o.n})).sort((a,b)=>a.v-b.v);
-    mk('dpByCity').setOption({grid:Object.assign({},grid,{right:56}),tooltip:tip({trigger:'axis',axisPointer:{type:'shadow'},formatter:p=>`${p[0].name}: <b>${fmt(p[0].value)}</b>`}),
+    const cDC=mk('dpByCity'); cDC.setOption({grid:Object.assign({},grid,{right:56}),tooltip:tip({trigger:'axis',axisPointer:{type:'shadow'},formatter:p=>`${p[0].name}: <b>${fmt(p[0].value)}</b>`}),
       xAxis:{type:'value',axisLabel:{color:axc(),formatter:compact},splitLine:{lineStyle:{color:css('--line2')}}},
       yAxis:{type:'category',data:arr.map(a=>a.c),axisLabel:{color:txc(),fontSize:11},axisLine:{lineStyle:{color:css('--line')}}},
-      series:[{type:'bar',barMaxWidth:18,data:arr.map(a=>({value:Math.round(a.v),itemStyle:{color:CITY_COLOR[a.c],borderRadius:[0,6,6,0]}})),label:{show:true,position:'right',color:txc(),fontSize:10,formatter:p=>compact(p.value)}}]},true);
+      series:[{type:'bar',barMaxWidth:18,cursor:'pointer',data:arr.map(a=>({value:Math.round(a.v),itemStyle:{color:CITY_COLOR[a.c],borderRadius:[0,6,6,0]}})),label:{show:true,position:'right',color:txc(),fontSize:10,formatter:p=>compact(p.value)}}]},true);
+    cDC.off('click'); cDC.on('click',p=>{ const o=arr[p.dataIndex]; if(o&&window.onDrill) window.onDrill('city',o.c); });
     const cities=[...new Set(d.map(r=>r.city))];
-    mk('dpScatter').setOption({grid:Object.assign({},grid,{right:22,top:12}),
-      tooltip:tip({trigger:'item',formatter:p=>{const r=p.data[2];return `<b>${r.city}</b><br>${t('t_plot')} ${r.plot}<br>${t('t_down')}: <b>${fmt(r.down_payment)}</b><br>${t('t_total')}: <b>${fmt(r.total_price)}</b>`;}}),
+    const cDS=mk('dpScatter'); cDS.setOption({grid:Object.assign({},grid,{right:22,top:12}),
+      tooltip:tip({trigger:'item',formatter:p=>{const r=p.data[2];return `<b>${r.city}</b><br>${t('t_plot')} ${r.plot}<br>${t('t_down')}: <b>${fmt(r.down_payment)}</b><br>${t('t_total')}: <b>${fmt(r.total_price)}</b><br><span style="opacity:.7">${t('click_map_hint')}</span>`;}}),
       xAxis:{type:'value',name:t('t_total'),nameTextStyle:{color:axc()},axisLabel:{color:axc(),formatter:compact},splitLine:{lineStyle:{color:css('--line2')}}},
       yAxis:{type:'value',name:t('t_down'),nameTextStyle:{color:axc()},axisLabel:{color:axc(),formatter:compact},splitLine:{lineStyle:{color:css('--line2')}}},
-      series:cities.map(ct=>({name:ct,type:'scatter',symbolSize:6,itemStyle:{color:CITY_COLOR[ct],opacity:.7},data:d.filter(r=>r.city===ct).map(r=>[r.total_price,r.down_payment,r])}))},true);
+      series:cities.map(ct=>({name:ct,type:'scatter',symbolSize:6,cursor:'pointer',itemStyle:{color:CITY_COLOR[ct],opacity:.7},data:d.filter(r=>r.city===ct).map(r=>[r.total_price,r.down_payment,r])}))},true);
+    cDS.off('click'); cDS.on('click',p=>{ const r=p.data&&p.data[2]; if(r&&window.openMap) window.openMap(r); });
     topListEl('dpTop', d.slice().sort((a,b)=>a.down_payment-b.down_payment).slice(0,10), false);
   }
 

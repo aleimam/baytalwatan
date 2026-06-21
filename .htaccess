@@ -4,6 +4,14 @@ Options -Indexes
 <IfModule mod_headers.c>
   Header set X-Content-Type-Options "nosniff"
 </IfModule>
+# Route the app's /api/ endpoints to the PHP backend (Apache + PHP hosts).
+# On nginx+Node hosts this file is ignored and /api/ is proxied to Node instead.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^api/ping$  api.php?action=ping [QSA,L]
+  RewriteRule ^api/auth$  auth.php [QSA,L]
+  RewriteRule ^api/admin$ admin.php [QSA,L]
+</IfModule>
 # Long cache for static maps/assets
 <IfModule mod_expires.c>
   ExpiresActive On

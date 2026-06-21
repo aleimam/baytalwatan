@@ -23,8 +23,10 @@ const DATA_DIR    = process.env.DATA_DIR || path.join(__dirname, '..', '..'); //
 const USERS_FILE  = process.env.USERS_FILE    || path.join(DATA_DIR, 'bayt_users.json');
 const SETT_FILE   = process.env.SETTINGS_FILE || path.join(DATA_DIR, 'bayt_settings.json');
 const SECRET_FILE = process.env.SECRET_FILE   || path.join(DATA_DIR, 'bayt_session_secret');
+const VISITS_FILE = process.env.VISITS_FILE   || path.join(DATA_DIR, 'bayt_visits.jsonl');
 const WEBROOT     = process.env.WEBROOT || ''; // optional: also serve static files (handy for local dev)
 const SESSION_DAYS = 30;
+const VISITS_KEEP  = 30000;   // cap the visit log to the most recent N events
 
 /* ---------- tiny JSON store (atomic writes) ---------- */
 function readJSON(file, fallback){ try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { return fallback; } }
@@ -96,6 +98,76 @@ function readBody(req){ return new Promise(resolve => { let d = ''; req.on('data
 const nextId = (users) => users.reduce((m, u) => Math.max(m, u.id || 0), 0) + 1;
 const isEmail = (s) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(s || ''));
 
+/* ---------- visitor tracking ---------- */
+function clientIp(req){
+  const xff = req.headers['x-forwarded-for'];
+  const ip = xff ? String(xff).split(',')[0].trim() : (req.socket.remoteAddress || '');
+  return ip.replace('::ffff:', '');
+}
+function parseUA(ua){
+  ua = ua || '';
+  let os = '—';
+  if (/Windows NT 10/i.test(ua)) os = 'Windows 10/11'; else if (/Windows/i.test(ua)) os = 'Windows';
+  else if (/Android/i.test(ua)) os = 'Android'; else if (/iPhone|iPad|iPod/i.test(ua)) os = 'iOS';
+  else if (/Mac OS X/i.test(ua)) os = 'macOS'; else if (/Linux/i.test(ua)) os = 'Linux';
+  let br = '—';
+  if (/Edg\//i.test(ua)) br = 'Edge'; else if (/OPR\/|Opera/i.test(ua)) br = 'Opera';
+  else if (/Chrome\//i.test(ua)) br = 'Chrome'; else if (/Firefox\//i.test(ua)) br = 'Firefox';
+  else if (/Safari\//i.test(ua)) br = 'Safari';
+  const dev = /Mobile|Android|iPhone|iPod/i.test(ua) ? 'Mobile' : (/iPad|Tablet/i.test(ua) ? 'Tablet' : 'Desktop');
+  return { os, br, dev };
+}
+const clip = (s, n) => String(s == null ? '' : s).slice(0, n);
+async function handleTrack(req, res){
+  const b = await readBody(req);
+  const me = currentUser(req);
+  const ua = req.headers['user-agent'] || '';
+  const p = parseUA(ua);
+  const rec = {
+    ts: new Date().toISOString(), sid: clip(b.sid, 40), ip: clientIp(req),
+    os: p.os, br: p.br, dev: p.dev, ua: clip(ua, 280),
+    path: clip(b.path, 160), ref: clip(b.ref, 200), scr: clip(b.scr, 20),
+    lang: clip(b.lang, 12), tz: clip(b.tz, 40),
+    dur: Math.max(0, Math.min(86400, parseInt(b.dur, 10) || 0)),
+    views: Math.max(0, Math.min(100000, parseInt(b.views, 10) || 0)),
+    user: me ? me.email : null
+  };
+  try { fs.appendFileSync(VISITS_FILE, JSON.stringify(rec) + '\n'); } catch (e) {}
+  res.writeHead(204); res.end();
+}
+function readVisitEvents(){
+  let lines;
+  try { lines = fs.readFileSync(VISITS_FILE, 'utf8').split('\n'); } catch (e) { return []; }
+  if (lines.length > VISITS_KEEP + 2000) {           // occasional trim to keep the file bounded
+    lines = lines.slice(-VISITS_KEEP);
+    try { fs.writeFileSync(VISITS_FILE, lines.join('\n')); } catch (e) {}
+  }
+  const out = [];
+  for (const l of lines) { if (!l) continue; try { out.push(JSON.parse(l)); } catch (e) {} }
+  return out;
+}
+function aggregateVisits(){
+  const ev = readVisitEvents();
+  const S = {};
+  for (const e of ev){
+    const sid = e.sid || (e.ip + '|' + clip(e.ts, 13));
+    const s = S[sid] || (S[sid] = { sid, first: e.ts, last: e.ts, ip: e.ip, os: e.os, br: e.br, dev: e.dev, path: e.path, ref: e.ref, scr: e.scr, lang: e.lang, tz: e.tz, dur: 0, views: 1, user: e.user || null });
+    s.last = e.ts; if (e.dur > s.dur) s.dur = e.dur; if (e.views > s.views) s.views = e.views; if (e.user) s.user = e.user;
+  }
+  const list = Object.values(S).sort((a, b) => (a.last < b.last ? 1 : -1));
+  const totalDur = list.reduce((a, s) => a + s.dur, 0);
+  const dayAgo = Date.now() - 864e5;
+  const summary = {
+    sessions: list.length,
+    uniqueIps: new Set(list.map(s => s.ip)).size,
+    registered: list.filter(s => s.user).length,
+    last24h: list.filter(s => new Date(s.last).getTime() > dayAgo).length,
+    avgDur: list.length ? Math.round(totalDur / list.length) : 0,
+    totalDur
+  };
+  return { summary, sessions: list.slice(0, 800) };
+}
+
 /* ---------- auth ---------- */
 async function handleAuth(req, res, action, secure){
   if (action === 'me')     { const u = currentUser(req); return json(res, 200, u ? { auth: true, user: publicUser(u) } : { auth: false }); }
@@ -134,6 +206,7 @@ async function handleAdmin(req, res, action){
   const me = currentUser(req);
   if (!me || me.role !== 'admin') return json(res, 403, { error: 'admin only' });
   if (action === 'users') return json(res, 200, { users: loadUsers().map(publicUser) });
+  if (action === 'visits') return json(res, 200, aggregateVisits());
   const body = await readBody(req);
   if (action === 'set_role') {
     const users = loadUsers();
@@ -191,6 +264,7 @@ const SRV = http.createServer(async (req, res) => {
   const secure = (req.headers['x-forwarded-proto'] === 'https');
   try {
     if (u.pathname === '/api/ping')  return json(res, 200, { ok: true });
+    if (u.pathname === '/api/track') return await handleTrack(req, res);
     if (u.pathname === '/api/auth')  return await handleAuth(req, res, action, secure);
     if (u.pathname === '/api/admin') return await handleAdmin(req, res, action);
     return serveStatic(req, res);

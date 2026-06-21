@@ -15,7 +15,39 @@ const Admin = {
     this.users = u.users || []; this.settings = s.settings || {};
     this.draw();
   },
-  draw(){ const el=document.getElementById('adminBody'); if(!el) return; if(this.tab==='users') this.drawUsers(el); else if(this.tab==='appear') this.drawAppear(el); else this.drawFeatures(el); },
+  draw(){ const el=document.getElementById('adminBody'); if(!el) return; if(this.tab==='users') this.drawUsers(el); else if(this.tab==='visitors') this.drawVisitors(el); else if(this.tab==='appear') this.drawAppear(el); else this.drawFeatures(el); },
+  async drawVisitors(el){
+    el.innerHTML = `<div class="ad-bar"><span class="c-muted">${t('vs_loading')}</span></div>`;
+    const v = await this.api('visits');
+    const s = v.summary || {sessions:0,uniqueIps:0,registered:0,last24h:0,avgDur:0};
+    const sess = v.sessions || [];
+    const fmtDur = d=>{ d=+d||0; if(d<60) return d+t('vs_sec'); const m=Math.floor(d/60), x=d%60; return m+t('vs_min')+(x?(' '+x+t('vs_sec')):''); };
+    const fmtTime = ts=>{ try{ return new Date(ts).toLocaleString(I18N.lang==='ar'?'ar-EG':'en-GB'); }catch(e){ return ts||''; } };
+    const cards = [[t('vs_sessions'),s.sessions],[t('vs_unique_ips'),s.uniqueIps],[t('vs_registered'),s.registered],[t('vs_last24h'),s.last24h],[t('vs_avg_time'),fmtDur(s.avgDur)]]
+      .map(c=>`<div class="kpi"><div class="lbl">${c[0]}</div><div class="val">${c[1]}</div></div>`).join('');
+    const esc = x=>String(x==null?'':x).replace(/</g,'&lt;');
+    const rows = sess.map(x=>`<tr>
+      <td class="c-muted">${fmtTime(x.last)}</td>
+      <td>${esc(x.ip)}</td>
+      <td>${x.user?`<span class="role-badge user">${esc(x.user)}</span>`:`<span class="c-muted">${t('vs_anon')}</span>`}</td>
+      <td>${esc(x.dev)} · ${esc(x.os)} · ${esc(x.br)}</td>
+      <td class="num">${fmtDur(x.dur)}</td>
+      <td class="num">${x.views||1}</td>
+      <td class="c-muted">${esc(x.lang)} ${x.scr?('· '+esc(x.scr)):''} ${x.tz?('· '+esc(x.tz)):''}</td>
+      <td class="c-muted">${x.ref?esc(x.ref.replace(/^https?:\/\//,'').slice(0,30)):t('vs_direct')}</td>
+    </tr>`).join('');
+    el.innerHTML = `<div class="ad-note">${t('vs_note')}</div>
+      <section class="kpis vs-kpis">${cards}</section>
+      <div class="ad-bar"><span class="count-pill">${t('vs_sessions')}: <b>${sess.length}</b></span><span class="spacer"></span><button class="btn" id="vsExport">${t('vs_export')}</button></div>
+      <div class="tbl-wrap"><table class="data adtbl"><thead><tr><th>${t('vs_time')}</th><th>IP</th><th>${t('vs_user')}</th><th>${t('vs_device')}</th><th>${t('vs_duration')}</th><th>${t('vs_views')}</th><th>${t('vs_meta')}</th><th>${t('vs_ref')}</th></tr></thead><tbody>${rows||''}</tbody></table></div>`;
+    const ex=el.querySelector('#vsExport'); if(ex) ex.onclick=()=>this.exportVisits(sess);
+  },
+  exportVisits(sess){
+    const cols=['last','first','ip','user','dev','os','br','dur','views','lang','tz','scr','ref','path'];
+    const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+    const csv='﻿'+cols.join(',')+'\r\n'+sess.map(x=>cols.map(c=>q(x[c])).join(',')).join('\r\n');
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download='baytalwatan_visitors.csv'; a.click();
+  },
   drawUsers(el){
     const rows = this.users.map(u=>`<tr>
       <td>${u.id}</td><td>${u.full_name||''}</td><td class="c-muted">${u.email}</td><td class="c-muted">${u.phone||''}</td>
@@ -66,3 +98,4 @@ const Admin = {
     const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download='baytalwatan_users.csv'; a.click();
   }
 };
+window.Admin = Admin;

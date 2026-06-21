@@ -57,7 +57,6 @@
       <button class="tab on" data-view="list" data-i18n="tab_list"></button>
       <button class="tab" data-view="analytics" data-i18n="tab_analytics"></button>
       <button class="tab" data-view="premium" data-i18n="tab_premium"></button>
-      <button class="tab" data-view="down" data-i18n="tab_down"></button>
       <button class="tab admin-only" data-view="admin" data-i18n="tab_admin" hidden></button>
       <span class="user-area" id="userArea" hidden><span class="user-name" id="userName"></span><button class="btn ghost" id="logoutBtn" data-i18n="logout"></button></span>
       <button class="btn ghost" id="langBtn" title="Language / اللغة">EN</button>
@@ -143,19 +142,6 @@
   </div>
 </main>
 
-<!-- ============ DOWN PAYMENT VIEW (مقدم الحجز) ============ -->
-<main id="view-down" class="wrap view" hidden>
-  <div class="hint"><span id="dpHintN"></span> <span data-i18n="dp_intro"></span></div>
-  <section class="kpis" id="dpKpis"></section>
-  <div class="agrid">
-    <div class="card a7"><h3 data-i18n="dp_c_hist"></h3><div class="chart tall" id="dpHist"></div></div>
-    <div class="card a5"><h3 data-i18n="dp_c_brackets"></h3><div class="chart tall" id="dpBrackets"></div><div class="bd-hint">↳ <span data-i18n="click_to_filter"></span></div></div>
-    <div class="card a8"><h3 data-i18n="dp_c_bycity"></h3><div class="chart tall" id="dpByCity"></div><div class="bd-hint">↳ <span data-i18n="click_to_filter"></span></div></div>
-    <div class="card a4"><h3 data-i18n="dp_c_scatter"></h3><div class="chart tall" id="dpScatter"></div><div class="bd-hint">↳ <span data-i18n="click_map_hint"></span></div></div>
-    <div class="card a12"><h3 data-i18n="dp_top_low"></h3><div id="dpTop"></div></div>
-  </div>
-</main>
-
 <!-- ============ ADMIN VIEW (الإدارة) ============ -->
 <main id="view-admin" class="wrap view" hidden>
   <h2 class="section-title" data-i18n="ad_title"></h2>
@@ -194,7 +180,7 @@
 <script src="assets/i18n.js?v=4"></script>
 <script src="assets/echarts.min.js"></script>
 <script src="assets/analytics.js?v=4"></script>
-<script src="assets/admin.js?v=4"></script>
-<script src="assets/app.js?v=4"></script>
+<script src="assets/admin.js?v=5"></script>
+<script src="assets/app.js?v=5"></script>
 </body>
 </html>

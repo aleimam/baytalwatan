@@ -215,24 +215,22 @@ async function exportCSV(){
 }
 
 /* ---------- tabs / theme / language ---------- */
-const VIEWS=['list','analytics','premium','down','admin'];
+const VIEWS=['list','analytics','premium','admin'];
 async function reRenderAnalytics(){
-  const v=currentView(); if(!['analytics','premium','down'].includes(v)) return;
+  const v=currentView(); if(!['analytics','premium'].includes(v)) return;
   const rows=await Lands.all(params(true)); updateCount(rows.length);
   if(v==='analytics'){ $('#anFilterHint').innerHTML=`${t('an_filter_hint')} <b>${fmt(rows.length)}</b> ${t('within_filter')}`; Analytics.render(rows,true); }
   else if(v==='premium'){ $('#prHint').innerHTML=`<b>${fmt(rows.length)}</b>`; Analytics.renderPremium(rows,true); }
-  else if(v==='down'){ $('#dpHintN').innerHTML=`<b>${fmt(rows.length)}</b>`; Analytics.renderDown(rows,true); }
 }
 async function showView(v){
   $$('.tab').forEach(el=>el.classList.toggle('on',el.dataset.view===v));
   VIEWS.forEach(n=>{ const el=document.getElementById('view-'+n); if(el) el.hidden=n!==v; });
   document.body.classList.toggle('on-list', v==='list');
   if(v==='list'){ renderList(); }
-  else if(v==='analytics'||v==='premium'||v==='down'){
+  else if(v==='analytics'||v==='premium'){
     const rows=await Lands.all(params(true)); updateCount(rows.length);
     if(v==='analytics'){ $('#anFilterHint').innerHTML=`${t('an_filter_hint')} <b>${fmt(rows.length)}</b> ${t('within_filter')}`; Analytics.render(rows,true); }
     else if(v==='premium'){ $('#prHint').innerHTML=`<b>${fmt(rows.length)}</b>`; Analytics.renderPremium(rows,true); }
-    else if(v==='down'){ $('#dpHintN').innerHTML=`<b>${fmt(rows.length)}</b>`; Analytics.renderDown(rows,true); }
   }
   if(v==='admin' && window.Admin && Admin.render) Admin.render();
 }
@@ -253,7 +251,7 @@ function applySettings(s){
   const subEl=$('#siteSub'), sub=(I18N.lang==='en'?s.site_sub_en:s.site_sub_ar);
   if(sub){ subEl.removeAttribute('data-i18n'); subEl.textContent=sub; } else { subEl.setAttribute('data-i18n','brand_sub'); subEl.textContent=I18N.t('brand_sub'); }
   if(s.accent) document.documentElement.style.setProperty('--accent',s.accent);
-  [['analytics',s.show_analytics],['premium',s.show_premium],['down',s.show_down]].forEach(([v,on])=>{ const tab=document.querySelector(`.tab[data-view="${v}"]`); if(tab) tab.style.display=(on==='0'?'none':''); });
+  [['analytics',s.show_analytics],['premium',s.show_premium]].forEach(([v,on])=>{ const tab=document.querySelector(`.tab[data-view="${v}"]`); if(tab) tab.style.display=(on==='0'?'none':''); });
 }
 
 function renderFooter(){

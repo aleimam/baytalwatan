@@ -51,12 +51,11 @@ const Admin = {
     el.innerHTML = `<div class="ad-form">
       <label class="ad-check"><input type="checkbox" id="adAn" ${ck(s.show_analytics)}> ${t('ad_show_analytics')}</label>
       <label class="ad-check"><input type="checkbox" id="adPr" ${ck(s.show_premium)}> ${t('ad_show_premium')}</label>
-      <label class="ad-check"><input type="checkbox" id="adDp" ${ck(s.show_down)}> ${t('ad_show_down')}</label>
       <div class="ad-actions-row"><button class="btn solid" id="adSaveF">${t('ad_save')}</button> <span class="ad-msg" id="adMsgF"></span></div>
     </div>`;
     el.querySelector('#adSaveF').onclick=async()=>{
       const g=id=>el.querySelector('#'+id);
-      const r=await this.api('settings_set',{show_analytics:g('adAn').checked?'1':'0',show_premium:g('adPr').checked?'1':'0',show_down:g('adDp').checked?'1':'0'});
+      const r=await this.api('settings_set',{show_analytics:g('adAn').checked?'1':'0',show_premium:g('adPr').checked?'1':'0'});
       if(r.settings){ this.settings=r.settings; applySettings(r.settings); g('adMsgF').textContent=t('ad_saved'); }
     };
   },

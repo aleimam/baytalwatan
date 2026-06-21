@@ -63,6 +63,22 @@ const F = {cities:new Set(), block:'', pMin:'',pMax:'',aMin:'',aMax:'',tMin:'',t
 let META=null, ALL_CITIES=[], curRows=[];
 const SORTCOLS=[['total_price','s_total'],['total_per_m','s_perm'],['premium','s_premium'],['area','s_area'],['plot','s_plot'],['city','s_city'],['zone_id','s_zone'],['base_per_m','s_base'],['down_payment','s_down'],['corner','s_corner'],['garden','s_garden'],['sea','s_sea']];
 const TCOLS=[['city','t_city'],['block','t_block'],['plot','t_plot'],['area','t_area'],['base_per_m','t_base'],['prem','t_prem'],['total_per_m','t_perm'],['total_price','t_total'],['down_payment','t_down'],['map','t_map']];
+let colVis = (function(){ try{ const s=JSON.parse(localStorage.getItem('bw_cols')); if(Array.isArray(s)&&s.length) return new Set(s.filter(k=>TCOLS.some(c=>c[0]===k))); }catch(e){} return new Set(TCOLS.map(c=>c[0])); })();
+const visTCOLS = () => TCOLS.filter(c=>colVis.has(c[0]));
+function premTags(r){ return [r.corner>0?`<span class="tag cor">${t('tag_corner')}</span>`:'',r.garden>0?`<span class="tag gar">${t('tag_garden')}</span>`:'',r.sea>0?`<span class="tag sea">${t('tag_sea')}</span>`:''].join('')||'<span class="c-muted">—</span>'; }
+function cellFor(r,k,i){ switch(k){
+  case 'city': return `<td class="c-muted">${r.city}</td>`;
+  case 'block': return `<td class="c-muted">${r.block}</td>`;
+  case 'plot': return `<td><a class="plotlink" data-i="${i}" title="${t('show_map')}">🗺️ ${r.plot}</a></td>`;
+  case 'area': return `<td>${fmt1(r.area)}</td>`;
+  case 'base_per_m': return `<td>${fmt(r.base_per_m)}</td>`;
+  case 'prem': return `<td>${premTags(r)}</td>`;
+  case 'total_per_m': return `<td>${fmt(r.total_per_m)}</td>`;
+  case 'total_price': return `<td><b>${fmt(r.total_price)}</b></td>`;
+  case 'down_payment': return `<td>${fmt(r.down_payment)}</td>`;
+  case 'map': return `<td><a class="plotlink" data-i="${i}">${t('view')} ↗</a></td>`;
+  default: return '<td></td>';
+}}
 
 function params(forAll){
   const p={}; if(F.cities.size && F.cities.size!==ALL_CITIES.length) p.cities=[...F.cities].join(',');
@@ -78,28 +94,17 @@ async function renderList(){
   const res = await Lands.query(params(false));
   curRows = res.rows;
   $('#countPill').innerHTML = `${t('results')}: <b>${fmt(res.total)}</b> ${t('plots_u')}` + (res.total!==META.totals.plots?` ${t('of_')} ${fmt(META.totals.plots)}`:'');
+  const cols = visTCOLS();
   // header
-  $('#tbl thead').innerHTML = '<tr>'+TCOLS.map(([k,lbl])=>{
+  $('#tbl thead').innerHTML = '<tr>'+cols.map(([k,lbl])=>{
     const sk = k==='prem'?'premium':k;
     const sortable = k!=='map';
     const ar = (sortable&&F.sort===sk)?` <span class="ar">${F.dir==='asc'?'▲':'▼'}</span>`:'';
     return `<th data-k="${k}" ${sortable?'':'style="cursor:default"'} title="${sortable?t('click_sort'):''}">${t(lbl)}${ar}</th>`;
   }).join('')+'</tr>';
   // body
-  $('#tbl tbody').innerHTML = curRows.map((r,i)=>{
-    const prem=[r.corner>0?`<span class="tag cor">${t('tag_corner')}</span>`:'',r.garden>0?`<span class="tag gar">${t('tag_garden')}</span>`:'',r.sea>0?`<span class="tag sea">${t('tag_sea')}</span>`:''].join('')||'<span class="c-muted">—</span>';
-    return `<tr>
-      <td class="c-muted">${r.city}</td>
-      <td class="c-muted">${r.block}</td>
-      <td><a class="plotlink" data-i="${i}" title="${t('show_map')}">🗺️ ${r.plot}</a></td>
-      <td>${fmt1(r.area)}</td>
-      <td>${fmt(r.base_per_m)}</td>
-      <td>${prem}</td>
-      <td>${fmt(r.total_per_m)}</td>
-      <td><b>${fmt(r.total_price)}</b></td>
-      <td>${fmt(r.down_payment)}</td>
-      <td><a class="plotlink" data-i="${i}">${t('view')} ↗</a></td></tr>`;
-  }).join('') || `<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--muted)">${t('no_results')}</td></tr>`;
+  $('#tbl tbody').innerHTML = curRows.map((r,i)=>'<tr>'+cols.map(([k])=>cellFor(r,k,i)).join('')+'</tr>').join('')
+    || `<tr><td colspan="${cols.length}" style="text-align:center;padding:30px;color:var(--muted)">${t('no_results')}</td></tr>`;
   $$('#tbl .plotlink').forEach(a=>a.onclick=()=>openMap(curRows[+a.dataset.i]));
   $$('#tbl thead th').forEach(th=>{ const k=th.dataset.k; if(k==='map')return; const sk=k==='prem'?'premium':k; th.onclick=()=>{ if(F.sort===sk)F.dir=F.dir==='asc'?'desc':'asc'; else{F.sort=sk;F.dir='desc';} F.page=1; syncSortControls(); renderList(); }; });
   renderPager(res);
@@ -230,10 +235,23 @@ function buildCityDropdown(){
 }
 function cityBtnTxt(){ $('#cityBtnTxt').textContent = F.cities.size===ALL_CITIES.length?t('all_cities'):(F.cities.size===0?t('no_cities'):`${F.cities.size} ${t('cities_n')}`); }
 function buildSortSelect(){ $('#sortSel').innerHTML=SORTCOLS.map(([k,lbl])=>`<option value="${k}">${t(lbl)}</option>`).join(''); syncSortControls(); }
+function buildColChooser(){
+  const el=$('#colList'); if(!el) return;
+  el.innerHTML = TCOLS.map(([k,lbl])=>`<label class="row"><input type="checkbox" value="${k}" ${colVis.has(k)?'checked':''}><span>${t(lbl)}</span></label>`).join('');
+  el.querySelectorAll('input').forEach(cb=>cb.onchange=()=>{
+    if(cb.checked) colVis.add(cb.value);
+    else { if(colVis.size<=1){ cb.checked=true; return; } colVis.delete(cb.value); }
+    try{ localStorage.setItem('bw_cols', JSON.stringify([...colVis])); }catch(e){}
+    renderList();
+  });
+}
 function debounce(fn,ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; }
 function wireFilters(){
   $('#cityBtn').onclick=()=>$('#cityPanel').classList.toggle('open');
   document.addEventListener('click',e=>{ if(!e.target.closest('.city-dd'))$('#cityPanel').classList.remove('open'); });
+  $('#colBtn').onclick=e=>{ e.stopPropagation(); $('#colPanel').classList.toggle('open'); };
+  document.addEventListener('click',e=>{ if(!e.target.closest('.col-dd'))$('#colPanel').classList.remove('open'); });
+  buildColChooser();
   $('#cityAll').onclick=()=>{ F.cities=new Set(ALL_CITIES); buildCityDropdown(); cityBtnTxt(); applyFilters(); };
   $('#cityNone').onclick=()=>{ F.cities=new Set(); buildCityDropdown(); cityBtnTxt(); applyFilters(); };
   const bind={pMin:'#pMin',pMax:'#pMax',aMin:'#aMin',aMax:'#aMax',tMin:'#tMin',tMax:'#tMax',dMin:'#dMin',dMax:'#dMax'};
@@ -283,7 +301,7 @@ function applyLang(){
   $('#langBtn').textContent=I18N.t('lang_btn');
   $$('#authLang button').forEach(b=>b.classList.toggle('on', b.dataset.setlang===I18N.lang));
   if(SETTINGS) applySettings(SETTINGS);
-  if(typeof APP_INITED!=='undefined' && APP_INITED){ cityBtnTxt(); buildSortSelect(); renderFooter(); renderList(); reRenderAnalytics(); if(currentView()==='terms' && window.Terms) Terms.render($('#termsBody')); }
+  if(typeof APP_INITED!=='undefined' && APP_INITED){ cityBtnTxt(); buildSortSelect(); buildColChooser(); renderFooter(); renderList(); reRenderAnalytics(); if(currentView()==='terms' && window.Terms) Terms.render($('#termsBody')); }
 }
 let SETTINGS=null;
 function applySettings(s){

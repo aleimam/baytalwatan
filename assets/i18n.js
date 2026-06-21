@@ -45,6 +45,7 @@ const I18N = {
     to:               { ar:'إلى', en:'To' },
     sort_by:          { ar:'ترتيب حسب', en:'Sort by' },
     per_page:         { ar:'لكل صفحة', en:'Per page' },
+    columns:          { ar:'الأعمدة', en:'Columns' },
     export_csv:       { ar:'تصدير CSV', en:'Export CSV' },
     dir_desc:         { ar:'▼ تنازلي', en:'▼ Desc' },
     dir_asc:          { ar:'▲ تصاعدي', en:'▲ Asc' },

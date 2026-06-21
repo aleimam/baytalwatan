@@ -341,7 +341,18 @@ async function initApp(){
   buildCityDropdown(); cityBtnTxt(); buildSortSelect(); wireFilters(); renderFooter(); renderChips();
   await renderList();
 }
+/* ---------- 60-second grace period before the gate ---------- */
+const GRACE_MS=60000; let GRACE_TIMER=null;
+function showGate(){ if(Auth.user) return; const g=$('#authGate'); if(g) g.style.display=''; }
+function startGrace(){
+  let started=+(sessionStorage.getItem('bw_grace_start')||0);
+  if(!started){ started=Date.now(); try{ sessionStorage.setItem('bw_grace_start',String(started)); }catch(e){} }
+  const remaining=Math.max(0, GRACE_MS-(Date.now()-started));
+  if(remaining<=0){ showGate(); return; }
+  GRACE_TIMER=setTimeout(showGate, remaining);
+}
 function enterApp(){
+  if(GRACE_TIMER){ clearTimeout(GRACE_TIMER); GRACE_TIMER=null; }
   const g=$('#authGate'); if(g) g.style.display='none';
   const ua=$('#userArea'); if(ua && Auth.user){ ua.hidden=false; $('#userName').textContent=Auth.user.full_name||Auth.user.email; }
   if(Auth.user && Auth.user.role==='admin'){ const at=document.querySelector('.tab.admin-only'); if(at) at.hidden=false; if(window.Admin) Admin.user=Auth.user; }
@@ -357,5 +368,5 @@ function wireAuth(){
 }
 applyLang();
 fetch('api/admin?action=settings_get').then(r=>r.json()).then(j=>{ if(j&&j.settings) applySettings(j.settings); }).catch(()=>{});
-(async()=>{ wireAuth(); if(await Auth.check()) enterApp(); })();
+(async()=>{ wireAuth(); const g=$('#authGate'); if(g) g.style.display='none'; const authed=await Auth.check(); enterApp(); if(!authed) startGrace(); })();
 window.addEventListener('resize',()=>{ if(!$('#mapModal').hidden) vFit(); });

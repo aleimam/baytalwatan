@@ -173,7 +173,7 @@ const I18N = {
     m_on_map:         { ar:'على الخريطة', en:'on the map' },
     m_locate:         { ar:'الخريطة تعرض كامل المنطقة. استخدم عجلة الفأرة للتكبير واسحب للتنقل. القطع المتاحة مظللة بالأصفر بالخريطة الأصلية.', en:'The map shows the whole zone. Scroll to zoom, drag to pan. Available plots are highlighted yellow on the original map.' },
     // gate
-    g_tagline:        { ar:'خدمات عقارية مجانية — سجّل للدخول إلى دليل الأراضي', en:'Free real-estate services — sign in to access the lands directory' },
+    g_tagline:        { ar:'سجّل أو سجّل دخولك للاستمتاع بجميع مزايا الموقع — البوابة مجانية بالكامل 🎉', en:'Register or sign in to enjoy all the benefits — the portal is completely free 🎉' },
     g_login:          { ar:'تسجيل الدخول', en:'Login' },
     g_register:       { ar:'إنشاء حساب', en:'Create account' },
     g_email:          { ar:'البريد الإلكتروني', en:'Email' },

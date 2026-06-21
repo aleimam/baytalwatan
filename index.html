@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@500;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/styles.css?v=6">
+<link rel="stylesheet" href="assets/styles.css?v=7">
 </head>
 <body>
 <!-- ============ REGISTRATION / LOGIN GATE ============ -->
@@ -57,6 +57,7 @@
       <button class="tab on" data-view="list" data-i18n="tab_list"></button>
       <button class="tab" data-view="analytics" data-i18n="tab_analytics"></button>
       <button class="tab" data-view="premium" data-i18n="tab_premium"></button>
+      <button class="tab" data-view="terms" data-i18n="tab_terms"></button>
       <button class="tab admin-only" data-view="admin" data-i18n="tab_admin" hidden></button>
       <span class="user-area" id="userArea" hidden><span class="user-name" id="userName"></span><button class="btn ghost" id="logoutBtn" data-i18n="logout"></button></span>
       <button class="btn ghost" id="langBtn" title="Language / اللغة">EN</button>
@@ -143,6 +144,12 @@
   </div>
 </main>
 
+<!-- ============ TERMS VIEW (الشروط والاشتراطات) ============ -->
+<main id="view-terms" class="wrap view" hidden>
+  <h2 class="section-title" data-i18n="tab_terms"></h2>
+  <div id="termsBody"></div>
+</main>
+
 <!-- ============ ADMIN VIEW (الإدارة) ============ -->
 <main id="view-admin" class="wrap view" hidden>
   <h2 class="section-title" data-i18n="ad_title"></h2>
@@ -178,10 +185,11 @@
 <footer class="wrap foot" id="foot"></footer>
 
 <script src="assets/data.js?d=1"></script>
-<script src="assets/i18n.js?v=6"></script>
+<script src="assets/i18n.js?v=7"></script>
 <script src="assets/echarts.min.js"></script>
 <script src="assets/analytics.js?v=6"></script>
 <script src="assets/admin.js?v=6"></script>
-<script src="assets/app.js?v=7"></script>
+<script src="assets/terms.js?v=1"></script>
+<script src="assets/app.js?v=8"></script>
 </body>
 </html>

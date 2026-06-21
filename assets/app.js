@@ -136,6 +136,15 @@ function openMap(r){
   $('#mSub').textContent=`${r.project}`;
   $('#mOpen').href=src;
   $('#mHint').textContent=`${t('m_find')} ${r.plot} ${t('m_on_map')}`;
+  const br = window.Terms && Terms.forPlot(r.city, r.block);
+  const brBlock = br ? `
+    <h4>${t('br_title')}</h4>
+    ${br.area?`<div class="kv"><span>${t('br_area')}</span><span>${br.area}</span></div>`:''}
+    <div class="kv"><span>${t('br_ratio')}</span><span>${br.ratio}</span></div>
+    <div class="kv"><span>${t('br_floors')}</span><span>${br.floors}</span></div>
+    <div class="kv"><span>${t('br_setbacks')}</span><span>${br.f} / ${br.b} / ${br.s} م</span></div>
+    <div class="kv"><span class="c-muted" style="font-size:11px">${t('br_fbs')}</span><span></span></div>
+    <a class="br-link" id="brLink">↗ ${t('br_seeterms')}</a>` : '';
   $('#plotInfo').innerHTML=`
     <h4>${t('m_plotno')}</h4><div class="big">${r.plot}</div>
     <h4>${t('m_location')}</h4>
@@ -151,7 +160,9 @@ function openMap(r){
     <div class="kv"><span>${t('p_corner')}</span><span>${r.corner>0?fmt(r.corner):'—'}</span></div>
     <div class="kv"><span>${t('p_garden')}</span><span>${r.garden>0?fmt(r.garden):'—'}</span></div>
     <div class="kv"><span>${t('p_sea')}</span><span>${r.sea>0?fmt(r.sea):'—'}</span></div>
+    ${brBlock}
     <div class="locate">📍 ${t('m_locate')}</div>`;
+  const bl=$('#brLink'); if(bl) bl.onclick=()=>{ closeMap(); showView('terms'); };
   $('#mapModal').hidden=false;
   V.natW=0; mImg.src=src;
   if(mImg.complete && mImg.naturalWidth){ V.natW=mImg.naturalWidth; V.natH=mImg.naturalHeight; vFit(); }
@@ -244,7 +255,7 @@ async function exportCSV(){
 }
 
 /* ---------- tabs / theme / language ---------- */
-const VIEWS=['list','analytics','premium','admin'];
+const VIEWS=['list','analytics','premium','terms','admin'];
 async function reRenderAnalytics(){
   const v=currentView(); if(!['analytics','premium'].includes(v)) return;
   const rows=await Lands.all(params(true)); updateCount(rows.length);
@@ -261,6 +272,7 @@ async function showView(v){
     if(v==='analytics'){ $('#anFilterHint').innerHTML=`${t('an_filter_hint')} <b>${fmt(rows.length)}</b> ${t('within_filter')}`; Analytics.render(rows,true); }
     else if(v==='premium'){ $('#prHint').innerHTML=`<b>${fmt(rows.length)}</b>`; Analytics.renderPremium(rows,true); }
   }
+  if(v==='terms' && window.Terms) Terms.render($('#termsBody'));
   if(v==='admin' && window.Admin && Admin.render) Admin.render();
 }
 $$('.tab').forEach(el=>el.onclick=()=>showView(el.dataset.view));
@@ -271,7 +283,7 @@ function applyLang(){
   $('#langBtn').textContent=I18N.t('lang_btn');
   $$('#authLang button').forEach(b=>b.classList.toggle('on', b.dataset.setlang===I18N.lang));
   if(SETTINGS) applySettings(SETTINGS);
-  if(typeof APP_INITED!=='undefined' && APP_INITED){ cityBtnTxt(); buildSortSelect(); renderFooter(); renderList(); reRenderAnalytics(); }
+  if(typeof APP_INITED!=='undefined' && APP_INITED){ cityBtnTxt(); buildSortSelect(); renderFooter(); renderList(); reRenderAnalytics(); if(currentView()==='terms' && window.Terms) Terms.render($('#termsBody')); }
 }
 let SETTINGS=null;
 function applySettings(s){

@@ -46,7 +46,8 @@ if [ -z "$DOCROOT" ] || [ ! -d "$DOCROOT" ]; then
   echo "   (If nothing mentions baytalwatan, the domain isn't added in CWP yet — add it in CWP > Domains first.)"
   exit 1
 fi
-OWNER=$(stat -c '%U:%G' "$DOCROOT")
+OWNER_USER=$(stat -c '%U' "$DOCROOT")
+OWNER="${OWNER_USER}:${OWNER_USER}"   # suEXEC/suPHP (Apache) requires files in the user's OWN group, not nobody
 echo "DocRoot: $DOCROOT"
 echo "Owner  : $OWNER"
 

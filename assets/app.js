@@ -110,11 +110,38 @@ async function renderList(){
   $('#tbl tbody').innerHTML = curRows.map((r,i)=>'<tr>'+cols.map(([k])=>cellFor(r,k,i)).join('')+'</tr>').join('')
     || `<tr><td colspan="${cols.length}" style="text-align:center;padding:30px;color:var(--muted)">${t('no_results')}</td></tr>`;
   $$('#tbl .plotlink').forEach(a=>a.onclick=()=>openMap(curRows[+a.dataset.i]));
-  $$('#tbl .wish-heart').forEach(b=>b.onclick=async()=>{ b.disabled=true; await Wish.toggleDefault(b.dataset.wk); b.classList.toggle('on', Wish.has(b.dataset.wk)); b.disabled=false; });
+  $$('#tbl .wish-heart').forEach(b=>b.onclick=e=>{ e.stopPropagation(); openWishPop(b, b.dataset.wk); });
   $$('#tbl thead th').forEach(th=>{ const k=th.dataset.k; if(k==='map'||k==='wish')return; const sk=k==='prem'?'premium':k; th.onclick=()=>{ if(F.sort===sk)F.dir=F.dir==='asc'?'desc':'asc'; else{F.sort=sk;F.dir='desc';} F.page=1; syncSortControls(); renderList(); }; });
   renderPager(res);
 }
 window.refreshWishHearts=function(){ if(window.Wish) $$('#tbl .wish-heart').forEach(b=>b.classList.toggle('on', Wish.has(b.dataset.wk))); };
+/* ---------- wishlist picker popover (heart click → choose a list) ---------- */
+let WISH_POP=null;
+function closeWishPop(){ if(!WISH_POP) return; WISH_POP.remove(); WISH_POP=null; document.removeEventListener('mousedown',onWishPopOutside,true); document.removeEventListener('keydown',onWishPopKey,true); }
+function onWishPopOutside(e){ if(WISH_POP && !WISH_POP.contains(e.target) && !(e.target.classList&&e.target.classList.contains('wish-heart'))) closeWishPop(); }
+function onWishPopKey(e){ if(e.key==='Escape') closeWishPop(); }
+function placeWishPop(pop, rect){
+  const w=pop.offsetWidth||230, h=pop.offsetHeight||260;   // offsetWidth forces layout, so min-width is applied
+  let left=window.scrollX+rect.left;
+  if(left+w > window.scrollX+window.innerWidth-8) left=window.scrollX+rect.right-w;   // overflow right → align right edge to anchor (open leftward)
+  left=Math.max(window.scrollX+8, left);
+  let top=window.scrollY+rect.bottom+6;
+  if(top+h > window.scrollY+window.innerHeight-8) top=window.scrollY+rect.top-h-6;     // overflow bottom → flip above the anchor
+  top=Math.max(window.scrollY+8, top);
+  pop.style.left=left+'px'; pop.style.top=top+'px';
+}
+function openWishPop(anchor, key){
+  closeWishPop();
+  const r=window.plotByKey&&window.plotByKey[key]; if(!r||!window.Wish) return;
+  const pop=document.createElement('div'); pop.className='wish-pop'; pop.id='wishPop';
+  pop.innerHTML='<div class="wish-pop-inner"></div>';
+  document.body.appendChild(pop); WISH_POP=pop;
+  const rect=anchor.getBoundingClientRect();
+  Wish.renderControl(pop.querySelector('.wish-pop-inner'), r);   // sets the loading state synchronously, then fills async
+  placeWishPop(pop, rect);                                       // place now (min-width is known)
+  setTimeout(()=>{ if(WISH_POP===pop) placeWishPop(pop, rect); }, 140);   // re-clamp once the lists finish loading (height may grow)
+  setTimeout(()=>{ if(!WISH_POP) return; document.addEventListener('mousedown',onWishPopOutside,true); document.addEventListener('keydown',onWishPopKey,true); },0);
+}
 function renderPager(res){
   const p=res.page,n=res.pages;
   $('#pager').innerHTML=`<button id="pFirst" ${p<=1?'disabled':''}>«</button><button id="pPrev" ${p<=1?'disabled':''}>${t('prev')}</button>

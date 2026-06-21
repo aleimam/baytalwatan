@@ -222,6 +222,9 @@ body.dark .wl-head h3{color:#dfe7f5}
 #tbl thead th[data-k="wish"]{font-size:15px;color:#e23b5a}
 .wish-control.wish-top{margin-top:10px;border-top:none;border:1px solid var(--gold);background:var(--card2);border-radius:12px;padding:9px 12px}
 .wish-control.wish-top h4{margin-top:0;color:var(--gold2)}
+.wish-pop{position:absolute;z-index:140;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 36px rgba(6,18,40,.24);padding:10px 12px;min-width:210px;max-width:300px}
+.wish-pop h4{margin:0 0 2px;font-size:13px;color:var(--gold2)}
+.wish-pop .wl-chips{max-height:240px;overflow:auto;margin-top:8px}
 .bd-sub{font-size:11.5px;color:var(--muted2);margin-inline-start:auto}
 #bdDim{background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:5px 9px;font-size:12.5px;font-family:inherit}
 .ch-head{flex-wrap:wrap}

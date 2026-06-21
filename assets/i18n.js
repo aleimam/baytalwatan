@@ -250,6 +250,7 @@ const I18N = {
     ad_make_admin:    { ar:'ترقية لمدير', en:'Make admin' },
     ad_make_user:     { ar:'إلى مستخدم', en:'Make user' },
     ad_confirm_del:   { ar:'حذف هذا المستخدم؟', en:'Delete this user?' },
+    ad_you:           { ar:'(أنت)', en:'(you)' },
     ad_site_title:    { ar:'اسم الموقع', en:'Site title' },
     ad_site_sub:      { ar:'الوصف أسفل الاسم', en:'Header subtitle' },
     ad_accent:        { ar:'اللون المميّز', en:'Accent color' },

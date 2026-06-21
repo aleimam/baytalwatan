@@ -53,15 +53,15 @@ const Admin = {
       <td>${u.id}</td><td>${u.full_name||''}</td><td class="c-muted">${u.email}</td><td class="c-muted">${u.phone||''}</td>
       <td><span class="role-badge ${u.role}">${u.role==='admin'?t('role_admin'):t('role_user')}</span></td>
       <td class="c-muted">${(u.created_at||'').slice(0,10)}</td>
-      <td class="ad-act">
-        ${u.role==='admin'?`<button class="btn sm" data-act="role" data-id="${u.id}" data-role="user">${t('ad_make_user')}</button>`:`<button class="btn sm" data-act="role" data-id="${u.id}" data-role="admin">${t('ad_make_admin')}</button>`}
-        <button class="btn sm danger" data-act="del" data-id="${u.id}">${t('ad_delete')}</button>
+      <td class="ad-act">${this.user&&this.user.email===u.email?`<span class="c-muted">${t('ad_you')}</span>`:`
+        ${u.role==='admin'?`<button class="btn sm" data-act="role" data-email="${u.email}" data-role="user">${t('ad_make_user')}</button>`:`<button class="btn sm" data-act="role" data-email="${u.email}" data-role="admin">${t('ad_make_admin')}</button>`}
+        <button class="btn sm danger" data-act="del" data-email="${u.email}">${t('ad_delete')}</button>`}
       </td></tr>`).join('');
     el.innerHTML = `<div class="ad-bar"><span class="count-pill">${t('ad_users_total')}: <b>${this.users.length}</b></span><span class="spacer"></span><button class="btn" id="adExport">${t('export_users')}</button></div>
       <div class="tbl-wrap"><table class="data adtbl"><thead><tr><th>#</th><th>${t('ad_name')}</th><th>${t('g_email')}</th><th>${t('g_phone')}</th><th>${t('ad_role')}</th><th>${t('ad_created')}</th><th>${t('ad_actions')}</th></tr></thead><tbody>${rows||''}</tbody></table></div>`;
     el.querySelector('#adExport').onclick=()=>this.exportUsers();
-    el.querySelectorAll('[data-act=role]').forEach(b=>b.onclick=async()=>{ b.disabled=true; await this.api('set_role',{id:+b.dataset.id,role:b.dataset.role}); this.render(); });
-    el.querySelectorAll('[data-act=del]').forEach(b=>b.onclick=async()=>{ if(confirm(t('ad_confirm_del'))){ await this.api('delete_user',{id:+b.dataset.id}); this.render(); } });
+    el.querySelectorAll('[data-act=role]').forEach(b=>b.onclick=async()=>{ b.disabled=true; await this.api('set_role',{email:b.dataset.email,role:b.dataset.role}); this.render(); });
+    el.querySelectorAll('[data-act=del]').forEach(b=>b.onclick=async()=>{ if(confirm(t('ad_confirm_del'))){ await this.api('delete_user',{email:b.dataset.email}); this.render(); } });
   },
   drawAppear(el){
     const s=this.settings;

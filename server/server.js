@@ -252,15 +252,18 @@ async function handleAdmin(req, res, action){
   if (action === 'wishlists') return json(res, 200, aggregateWishlists());
   const body = await readBody(req);
   if (action === 'set_role') {
+    const em = String(body.email || '').toLowerCase(), id = body.id != null ? +body.id : null;
     const users = loadUsers();
-    const u = users.find(x => x.email === String(body.email || '').toLowerCase());
-    if (u) { u.role = body.role === 'admin' ? 'admin' : 'user'; saveUsers(users); }
-    return json(res, 200, { ok: true });
+    const u = users.find(x => (em && x.email === em) || (id != null && x.id === id));
+    if (u) { u.role = body.role === 'admin' ? 'admin' : 'user'; saveUsers(users); return json(res, 200, { ok: true, user: publicUser(u) }); }
+    return json(res, 200, { ok: false, error: 'user not found' });
   }
   if (action === 'delete_user') {
-    const em = String(body.email || '').toLowerCase();
-    saveUsers(loadUsers().filter(x => x.email !== em));
-    return json(res, 200, { ok: true });
+    const em = String(body.email || '').toLowerCase(), id = body.id != null ? +body.id : null;
+    const before = loadUsers();
+    const after = before.filter(x => !((em && x.email === em) || (id != null && x.id === id)));
+    saveUsers(after);
+    return json(res, 200, { ok: after.length < before.length });
   }
   if (action === 'settings_set') {
     const s = Object.assign(loadSettings(), body.settings || {});

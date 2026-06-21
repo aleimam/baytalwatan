@@ -178,6 +178,7 @@ window.onDrill=function(dim,key,range){
   if(dim==='city'){ F.cities=new Set([key]); buildCityDropdown(); cityBtnTxt(); }
   else if(dim==='block'||dim==='project'){ F.q=key; $('#searchBox').value=key; }
   else if(dim==='premium'){ F.prem = key==='0'?'none':'any'; $('#premSel').value=F.prem; }
+  else if(dim==='premtype'){ F.prem = key; $('#premSel').value=key; }
   else if(range){ const map={price:['pMin','pMax'],total:['tMin','tMax'],area:['aMin','aMax'],down:['dMin','dMax']}; const mm=map[dim]; if(mm){ F[mm[0]]=range[0]; F[mm[1]]=range[1]>=1e9?'':range[1]; $('#'+mm[0]).value=F[mm[0]]; $('#'+mm[1]).value=F[mm[1]]; } }
   applyFilters();
 };
@@ -218,9 +219,9 @@ const VIEWS=['list','analytics','premium','down','admin'];
 async function reRenderAnalytics(){
   const v=currentView(); if(!['analytics','premium','down'].includes(v)) return;
   const rows=await Lands.all(params(true)); updateCount(rows.length);
-  if(v==='analytics') Analytics.render(rows,true);
-  else if(v==='premium') Analytics.renderPremium(rows,true);
-  else if(v==='down') Analytics.renderDown(rows,true);
+  if(v==='analytics'){ $('#anFilterHint').innerHTML=`${t('an_filter_hint')} <b>${fmt(rows.length)}</b> ${t('within_filter')}`; Analytics.render(rows,true); }
+  else if(v==='premium'){ $('#prHint').innerHTML=`<b>${fmt(rows.length)}</b>`; Analytics.renderPremium(rows,true); }
+  else if(v==='down'){ $('#dpHintN').innerHTML=`<b>${fmt(rows.length)}</b>`; Analytics.renderDown(rows,true); }
 }
 async function showView(v){
   $$('.tab').forEach(el=>el.classList.toggle('on',el.dataset.view===v));

@@ -203,6 +203,7 @@ const Analytics = (() => {
   return {
     render(rows,disposeFirst){ DATA=rows||[]; if(disposeFirst) disposeAll(); renderAll(); },
     renderPremium(rows,disposeFirst){ if(disposeFirst) disposeAll(); doPremium(rows); },
-    renderDown(rows,disposeFirst){ if(disposeFirst) disposeAll(); doDown(rows); }
+    renderDown(rows,disposeFirst){ if(disposeFirst) disposeAll(); doDown(rows); },
+    setBreakdown(d){ bdDim=d; const el=document.getElementById('bdDim'); if(el) el.value=d; }
   };
 })();

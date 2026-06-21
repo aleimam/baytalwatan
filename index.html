@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@500;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/styles.css?v=4">
+<link rel="stylesheet" href="assets/styles.css?v=6">
 </head>
 <body>
 <!-- ============ REGISTRATION / LOGIN GATE ============ -->
@@ -116,8 +116,9 @@
     <div class="card a8"><div class="ch-head"><h3 data-i18n="c_breakdown"></h3>
       <label class="inline"><span data-i18n="breakdown_by"></span> <select id="bdDim"></select></label>
       <div class="seg" id="cityMetric"><button class="on" data-m="count" data-i18n="m_count"></button><button data-m="value" data-i18n="m_value"></button><button data-m="area" data-i18n="m_area"></button><button data-m="avgM" data-i18n="m_avgm"></button><button data-m="avgDown" data-i18n="m_avgdown"></button></div></div>
+      <div class="drill-crumb" id="drillCrumb" style="display:none"></div>
       <div class="chart tall" id="cByCity"></div>
-      <div class="bd-hint">↳ <span data-i18n="click_to_filter"></span></div></div>
+      <div class="bd-hint">↳ <span data-i18n="drill_hint"></span></div></div>
     <div class="card a4"><h3 data-i18n="c_segments"></h3><div class="chart tall" id="cSeg"></div><div class="bd-hint">↳ <span data-i18n="click_to_filter"></span></div></div>
     <div class="card a7"><h3 data-i18n="c_tree"></h3><div class="chart tall" id="cTree"></div></div>
     <div class="card a5"><h3 data-i18n="c_prem"></h3><div class="chart tall" id="cPrem"></div><div class="bd-hint">↳ <span data-i18n="click_to_filter"></span></div></div>
@@ -177,10 +178,10 @@
 <footer class="wrap foot" id="foot"></footer>
 
 <script src="assets/data.js?d=1"></script>
-<script src="assets/i18n.js?v=4"></script>
+<script src="assets/i18n.js?v=6"></script>
 <script src="assets/echarts.min.js"></script>
-<script src="assets/analytics.js?v=4"></script>
-<script src="assets/admin.js?v=5"></script>
-<script src="assets/app.js?v=5"></script>
+<script src="assets/analytics.js?v=6"></script>
+<script src="assets/admin.js?v=6"></script>
+<script src="assets/app.js?v=7"></script>
 </body>
 </html>

@@ -31,6 +31,17 @@ if [ -z "$DOCROOT" ]; then
     CONF=$("$HTTPD" -S 2>/dev/null | grep -iE "namevhost[[:space:]]+${DOMAIN}([[:space:]]|$)" | grep -oE '\(/[^:]+' | tr -d '(' | head -1)
   fi
   [ -n "$CONF" ] && [ -f "$CONF" ] && DOCROOT=$(awk 'tolower($1)=="documentroot"{gsub(/"/,"",$2);print $2;exit}' "$CONF")
+  # nginx vhost (CWP nginx / nginx-front): pull the `root ...;` directive
+  if [ -z "$DOCROOT" ]; then
+    for ng in /etc/nginx/conf.d/vhosts/${DOMAIN}.conf /etc/nginx/conf.d/vhosts/${DOMAIN}.ssl.conf \
+              /usr/local/nginx/conf/conf.d/vhosts/${DOMAIN}.conf /usr/local/nginx/conf/vhosts/${DOMAIN}.conf; do
+      [ -f "$ng" ] && DOCROOT=$(awk '$1=="root"{r=$2;gsub(/;/,"",r);print r;exit}' "$ng") && [ -n "$DOCROOT" ] && break
+    done
+    if [ -z "$DOCROOT" ]; then
+      NGCONF=$(grep -rilE "server_name[[:space:]].*${DOMAIN}" /etc/nginx /usr/local/nginx/conf 2>/dev/null | head -1)
+      [ -n "$NGCONF" ] && DOCROOT=$(awk '$1=="root"{r=$2;gsub(/;/,"",r);print r;exit}' "$NGCONF")
+    fi
+  fi
   # home-dir heuristic (domain-specific — never a blind glob)
   if [ -z "$DOCROOT" ]; then
     base="${DOMAIN%%.*}"
@@ -41,9 +52,10 @@ if [ -z "$DOCROOT" ]; then
 fi
 if [ -z "$DOCROOT" ] || [ ! -d "$DOCROOT" ]; then
   echo "!! Could not auto-detect the document root for $DOMAIN."
-  echo "   Run this and send me the output:"
-  echo "     ${HTTPD:-httpd} -S 2>/dev/null | grep -i baytal ; ls -d /home/*/public_html 2>/dev/null ; grep -rhiE DocumentRoot /usr/local/apache/conf.d/vhosts/ 2>/dev/null"
-  echo "   (If nothing mentions baytalwatan, the domain isn't added in CWP yet — add it in CWP > Domains first.)"
+  echo "   Re-run with the path stated explicitly, e.g.:"
+  echo "     DOCROOT=/home/USER/public_html bash <(curl -fsSL .../deploy-cwp.sh) $DOMAIN"
+  echo "   To find it, run this and send me the output:"
+  echo "     ls -d /home/*/public_html 2>/dev/null ; grep -rEi 'server_name|root ' /etc/nginx/conf.d/vhosts/ /usr/local/nginx/conf 2>/dev/null | grep -i ${DOMAIN%%.*}"
   exit 1
 fi
 OWNER_USER=$(stat -c '%U' "$DOCROOT")

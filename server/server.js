@@ -288,7 +288,12 @@ async function handleUetr(req, res, action){
   const bank = clip(body.bank, 80).trim();
   const me = currentUser(req), ip = clientIp(req), now = new Date().toISOString();
   const existing = store.byUetr[uetr];
-  if (existing) {   // repeat: report prior result, do NOT re-query or re-add to the queue
+  if (existing) {   // repeat: show the prior result; while not yet delivered, re-query so the order updates. Never a second queue entry.
+    if (!existing.deliveryAt) {
+      const re = normalizeUetr(await Promise.all(UETR_SOURCES.map(fn => fn({ uetr, amount: existing.amount, currency: existing.currency, date: existing.date }))));
+      existing.result = re.found ? 'found' : 'failed';
+      existing.conclusion = re.conclusion; existing.agreement = re.agreement; existing.deliveryAt = re.deliveryAt; existing.sources = re.perSource; existing.refreshedAt = now;
+    }
     store.trials.push({ uetr, at: now, result: existing.result, repeat: true, bank, user: me ? me.email : null, ip });
     if (store.trials.length > UETR_TRIALS_KEEP + 2000) store.trials = store.trials.slice(-UETR_TRIALS_KEEP);
     saveUetr(store);

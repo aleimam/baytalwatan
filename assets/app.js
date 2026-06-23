@@ -386,6 +386,7 @@ function applySettings(s){
   if(sub){ subEl.removeAttribute('data-i18n'); subEl.textContent=sub; } else { subEl.setAttribute('data-i18n','brand_sub'); subEl.textContent=I18N.t('brand_sub'); }
   if(s.accent) document.documentElement.style.setProperty('--accent',s.accent);
   [['analytics',s.show_analytics],['premium',s.show_premium]].forEach(([v,on])=>{ const tab=document.querySelector(`.tab[data-view="${v}"]`); if(tab) tab.style.display=(on==='0'?'none':''); });
+  const utTab=document.querySelector('.tab[data-view="uetr"]'); if(utTab) utTab.style.display=(s.show_uetr==='1'?'':'none');   // UETR section off unless explicitly enabled
 }
 
 function renderFooter(){

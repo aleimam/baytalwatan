@@ -355,6 +355,7 @@ const I18N = {
     ad_accent:        { ar:'اللون المميّز', en:'Accent color' },
     ad_show_analytics:{ ar:'إظهار لوحة التحليلات', en:'Show Analytics tab' },
     ad_show_premium:  { ar:'إظهار القطع المتميزة', en:'Show Premium Plots tab' },
+    ad_show_uetr:     { ar:'تفعيل قسم تتبّع التحويلات (UETR)', en:'Enable transfer-tracking (UETR) tab' },
     ad_show_down:     { ar:'إظهار مقدم الحجز', en:'Show Down Payment tab' },
     ad_saved:         { ar:'تم الحفظ', en:'Saved' },
     role_admin:       { ar:'مدير', en:'Admin' },

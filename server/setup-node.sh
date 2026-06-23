@@ -68,7 +68,8 @@ RestartSec=2
 WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
-systemctl enable --now "${SVC}"
+systemctl enable "${SVC}" >/dev/null 2>&1 || true
+systemctl restart "${SVC}"   # restart (not just enable --now) so updated code + env are actually loaded
 sleep 2
 echo "service active: $(systemctl is-active "${SVC}")"
 echo "local ping: $(curl -s "http://127.0.0.1:${PORT}/api/ping")"

@@ -246,7 +246,12 @@ function ohmyfinTrack({ uetr, amount, currency, date }){
     const rq = https.request(opts, r => {
       let d = ''; r.on('data', c => d += c); r.on('end', () => {
         let j = null; try { j = JSON.parse(d); } catch (e) {}
-        if (r.statusCode >= 400 || !j) return resolve({ name: 'Ohmyfin', ok: false, state: 'error', reason: (j && (j.message || j.error)) || ('http_' + r.statusCode) });
+        if (r.statusCode >= 400 || !j) {
+          const msg = (j && (j.message || j.error)) || ('http_' + r.statusCode);
+          if (/subscription|trial/i.test(msg)) return resolve({ name: 'Ohmyfin', ok: false, state: 'unavailable', reason: 'subscription' });
+          if (r.statusCode === 401 || r.statusCode === 403) return resolve({ name: 'Ohmyfin', ok: false, state: 'unavailable', reason: 'auth' });
+          return resolve({ name: 'Ohmyfin', ok: false, state: 'error', reason: msg });
+        }
         const map = { 'success': 'delivered', 'in progress': 'in_progress', 'on hold': 'on_hold', 'rejected': 'rejected', 'unknown': 'unknown' };
         const state = map[String(j.status || '').toLowerCase()] || 'unknown';
         const details = Array.isArray(j.details) ? j.details.slice(0, 40).map(x => ({ bank: clip(x.bank, 80), swift: clip(x.swift, 16), status: clip(x.status, 40), reason: clip(x.reason, 120), route: clip(x.route, 80) })) : [];

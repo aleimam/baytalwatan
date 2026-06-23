@@ -275,6 +275,8 @@ const I18N = {
     ut_s_unavailable: { ar:'غير متاح', en:'Unavailable' },
     ut_s_error:       { ar:'تعذّر', en:'Error' },
     ut_r_no_api_key:  { ar:'لم يُضبط مفتاح المصدر على الخادم بعد', en:'Source API key not set on the server yet' },
+    ut_r_subscription:{ ar:'تتبّع التحويلات في Ohmyfin يتطلب اشتراكاً مفعّلاً (مدفوعاً)', en:'Ohmyfin payment tracking needs an active (paid) subscription' },
+    ut_r_auth:        { ar:'مفتاح Ohmyfin غير صالح', en:'Invalid Ohmyfin API key' },
     ut_r_timeout:     { ar:'انتهت مهلة الاستجابة', en:'Request timed out' },
     ut_r_network:     { ar:'تعذّر الاتصال بالمصدر', en:'Could not reach the source' },
     ut_a_unique:      { ar:'تحويلات فريدة', en:'Unique UETRs' },

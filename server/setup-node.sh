@@ -58,6 +58,7 @@ User=${USER_ACC}
 Environment=PORT=${PORT}
 Environment=HOST=127.0.0.1
 Environment=DATA_DIR=${DATA_DIR}
+Environment=OHMYFIN_API_KEY=${OHMYFIN_API_KEY:-}
 WorkingDirectory=${API_DIR}
 ExecStart=$(command -v node) ${API_DIR}/server.js
 Restart=always

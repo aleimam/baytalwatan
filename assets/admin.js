@@ -15,7 +15,7 @@ const Admin = {
     this.users = u.users || []; this.settings = s.settings || {};
     this.draw();
   },
-  draw(){ const el=document.getElementById('adminBody'); if(!el) return; if(this.tab==='users') this.drawUsers(el); else if(this.tab==='visitors') this.drawVisitors(el); else if(this.tab==='wishlists'){ if(window.Wish) Wish.adminRender(el); else el.innerHTML=''; } else if(this.tab==='appear') this.drawAppear(el); else this.drawFeatures(el); },
+  draw(){ const el=document.getElementById('adminBody'); if(!el) return; if(this.tab==='users') this.drawUsers(el); else if(this.tab==='visitors') this.drawVisitors(el); else if(this.tab==='wishlists'){ if(window.Wish) Wish.adminRender(el); else el.innerHTML=''; } else if(this.tab==='uetr'){ if(window.Uetr) Uetr.adminRender(el); else el.innerHTML=''; } else if(this.tab==='appear') this.drawAppear(el); else this.drawFeatures(el); },
   async drawVisitors(el){
     el.innerHTML = `<div class="ad-bar"><span class="c-muted">${t('vs_loading')}</span></div>`;
     const v = await this.api('visits');

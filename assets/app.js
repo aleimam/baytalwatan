@@ -342,7 +342,7 @@ async function exportCSV(){
 }
 
 /* ---------- tabs / theme / language ---------- */
-const VIEWS=['list','analytics','premium','terms','wish','admin','shared'];
+const VIEWS=['list','analytics','premium','terms','wish','uetr','admin','shared'];
 function sharedParams(){ const sp=new URLSearchParams(location.search); if(sp.get('wl')===null) return null; return { keys:(sp.get('wl')||'').split(',').filter(Boolean), name:sp.get('n')||'' }; }
 function renderSharedFromUrl(){ const p=sharedParams(); if(p && window.Wish && Wish.renderShared) Wish.renderShared($('#sharedBody'), p.keys, p.name); }
 async function reRenderAnalytics(){
@@ -364,6 +364,7 @@ async function showView(v){
   }
   if(v==='terms' && window.Terms) Terms.render($('#termsBody'));
   if(v==='wish' && window.Wish) Wish.render($('#wishBody'));
+  if(v==='uetr' && window.Uetr) Uetr.render($('#uetrBody'));
   if(v==='admin' && window.Admin && Admin.render) Admin.render();
   if(v==='shared') renderSharedFromUrl();
 }

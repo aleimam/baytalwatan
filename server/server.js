@@ -12,6 +12,7 @@
    ========================================================================== */
 'use strict';
 const http   = require('http');
+const https  = require('https');
 const crypto = require('crypto');
 const fs     = require('fs');
 const path   = require('path');
@@ -210,6 +211,114 @@ function aggregateWishlists(){
   return { summary, lists: lists.sort((a, b) => (a.created_at < b.created_at ? 1 : -1)).slice(0, 600), topPlots };
 }
 
+/* ---------- UETR wire-transfer tracking ----------
+   Public search + per-source results + informational arrival queue.
+   Tracking source: Ohmyfin REST (POST https://ohmyfin.ai/api/track, header "KEY: <key>").
+   Key comes from OHMYFIN_API_KEY (env, never in the repo). No key -> source reports "unavailable". */
+const UETR_FILE   = process.env.UETR_FILE || path.join(DATA_DIR, 'bayt_uetr.json');
+const OHMYFIN_KEY = process.env.OHMYFIN_API_KEY || '';
+const UETR_WIN_START = process.env.UETR_WIN_START || '2026-06-23';   // Cairo-local date window for the queue
+const UETR_WIN_END   = process.env.UETR_WIN_END   || '2026-07-02';
+const UETR_TRIALS_KEEP = 20000;
+const loadUetr = () => { const d = readJSON(UETR_FILE, null); return (d && d.byUetr) ? d : { byUetr: {}, trials: [] }; };
+const saveUetr = (d) => writeJSON(UETR_FILE, d);
+const isUetr = (s) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(s || ''));
+
+function cairoParts(iso){
+  if (!iso) return null; const d = new Date(iso); if (isNaN(d)) return null;
+  try {
+    const f = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+    const p = {}; for (const part of f.formatToParts(d)) p[part.type] = part.value;
+    return { date: `${p.year}-${p.month}-${p.day}`, text: `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}` };
+  } catch (e) { return { date: iso.slice(0, 10), text: iso.slice(0, 16).replace('T', ' ') }; }
+}
+const toCairoText = (iso) => { const c = cairoParts(iso); return c ? c.text : null; };
+function inCairoWindow(iso){ const c = cairoParts(iso); return !!(c && c.date >= UETR_WIN_START && c.date <= UETR_WIN_END); }
+
+/* one tracking source -> { name, ok, state, raw, lastupdate, details[], reason } */
+function ohmyfinTrack({ uetr, amount, currency, date }){
+  return new Promise(resolve => {
+    if (!OHMYFIN_KEY) return resolve({ name: 'Ohmyfin', ok: false, state: 'unavailable', reason: 'no_api_key' });
+    let payload;
+    try { payload = JSON.stringify({ uetr, amount: Number(amount) || 0, currency: String(currency || ''), date: String(date || '') }); }
+    catch (e) { return resolve({ name: 'Ohmyfin', ok: false, state: 'unavailable', reason: 'bad_input' }); }
+    const opts = { method: 'POST', hostname: 'ohmyfin.ai', path: '/api/track', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload), 'KEY': OHMYFIN_KEY } };
+    const rq = https.request(opts, r => {
+      let d = ''; r.on('data', c => d += c); r.on('end', () => {
+        let j = null; try { j = JSON.parse(d); } catch (e) {}
+        if (r.statusCode >= 400 || !j) return resolve({ name: 'Ohmyfin', ok: false, state: 'error', reason: (j && (j.message || j.error)) || ('http_' + r.statusCode) });
+        const map = { 'success': 'delivered', 'in progress': 'in_progress', 'on hold': 'on_hold', 'rejected': 'rejected', 'unknown': 'unknown' };
+        const state = map[String(j.status || '').toLowerCase()] || 'unknown';
+        const details = Array.isArray(j.details) ? j.details.slice(0, 40).map(x => ({ bank: clip(x.bank, 80), swift: clip(x.swift, 16), status: clip(x.status, 40), reason: clip(x.reason, 120), route: clip(x.route, 80) })) : [];
+        resolve({ name: 'Ohmyfin', ok: true, state, raw: String(j.status || ''), lastupdate: j.lastupdate || null, details, limits: j.limits || null });
+      });
+    });
+    rq.on('error', e => resolve({ name: 'Ohmyfin', ok: false, state: 'error', reason: e.code || 'network' }));
+    rq.setTimeout(12000, () => { rq.destroy(); resolve({ name: 'Ohmyfin', ok: false, state: 'error', reason: 'timeout' }); });
+    rq.write(payload); rq.end();
+  });
+}
+const UETR_SOURCES = [ohmyfinTrack];   // slot additional sources here (each returns the same shape)
+
+const STATE_RANK = { delivered: 5, rejected: 4, on_hold: 3, in_progress: 2, unknown: 1, unavailable: 0, error: 0 };
+function normalizeUetr(results){
+  const perSource = results.map(r => ({ name: r.name, ok: !!r.ok, state: r.state || 'unknown', raw: r.raw || '', lastupdate: r.lastupdate || null, lastupdateCairo: toCairoText(r.lastupdate), details: r.details || [], reason: r.reason || null }));
+  const best = perSource.filter(s => s.ok).sort((a, b) => (STATE_RANK[b.state] || 0) - (STATE_RANK[a.state] || 0))[0];
+  const conclusion = best ? best.state : (perSource.some(s => s.reason === 'no_api_key') ? 'unconfigured' : 'unavailable');
+  const found = !!best && ['delivered', 'in_progress', 'on_hold', 'rejected'].includes(best.state);
+  const deliveredTimes = perSource.filter(s => s.state === 'delivered' && s.lastupdate).map(s => s.lastupdate).sort();
+  const deliveryAt = deliveredTimes.length ? deliveredTimes[0] : null;
+  const agreement = new Set(perSource.filter(s => s.ok).map(s => s.state)).size <= 1;
+  return { perSource, conclusion, found, deliveryAt, agreement };
+}
+function uetrQueue(byUetr, thisUetr){
+  const inWin = Object.values(byUetr).filter(r => r.deliveryAt && inCairoWindow(r.deliveryAt)).sort((a, b) => new Date(a.deliveryAt) - new Date(b.deliveryAt));
+  const idx = thisUetr ? inWin.findIndex(r => r.uetr === thisUetr) : -1;
+  return { position: idx >= 0 ? idx + 1 : null, total: inWin.length, windowStart: UETR_WIN_START, windowEnd: UETR_WIN_END };
+}
+async function handleUetr(req, res, action){
+  const store = loadUetr();
+  if (action === 'admin') {
+    const me = currentUser(req); if (!me || me.role !== 'admin') return json(res, 403, { error: 'admin only' });
+    return json(res, 200, aggregateUetr(store));
+  }
+  const body = await readBody(req);
+  const uetr = String(body.uetr || '').trim().toLowerCase();
+  if (!isUetr(uetr)) return json(res, 200, { error: 'invalid_uetr' });
+  const bank = clip(body.bank, 80).trim();
+  const me = currentUser(req), ip = clientIp(req), now = new Date().toISOString();
+  const existing = store.byUetr[uetr];
+  if (existing) {   // repeat: report prior result, do NOT re-query or re-add to the queue
+    store.trials.push({ uetr, at: now, result: existing.result, repeat: true, bank, user: me ? me.email : null, ip });
+    if (store.trials.length > UETR_TRIALS_KEEP + 2000) store.trials = store.trials.slice(-UETR_TRIALS_KEEP);
+    saveUetr(store);
+    return json(res, 200, { repeat: true, firstSearchedAtCairo: toCairoText(existing.searchedAt), sources: existing.sources, conclusion: existing.conclusion, agreement: existing.agreement !== false, deliveryAtCairo: toCairoText(existing.deliveryAt), queue: uetrQueue(store.byUetr, uetr) });
+  }
+  const norm = normalizeUetr(await Promise.all(UETR_SOURCES.map(fn => fn({ uetr, amount: body.amount, currency: clip(body.currency, 8).toUpperCase().trim(), date: clip(body.date, 12).trim() }))));
+  const rec = { uetr, bank, amount: Number(body.amount) || null, currency: clip(body.currency, 8).toUpperCase().trim(), date: clip(body.date, 12).trim(), searchedAt: now, ip, user: me ? me.email : null, result: norm.found ? 'found' : 'failed', conclusion: norm.conclusion, agreement: norm.agreement, deliveryAt: norm.deliveryAt, sources: norm.perSource };
+  store.byUetr[uetr] = rec;
+  store.trials.push({ uetr, at: now, result: rec.result, repeat: false, bank, user: me ? me.email : null, ip });
+  if (store.trials.length > UETR_TRIALS_KEEP + 2000) store.trials = store.trials.slice(-UETR_TRIALS_KEEP);
+  saveUetr(store);
+  return json(res, 200, { repeat: false, searchedAtCairo: toCairoText(now), sources: norm.perSource, conclusion: norm.conclusion, agreement: norm.agreement, deliveryAtCairo: toCairoText(norm.deliveryAt), queue: uetrQueue(store.byUetr, uetr) });
+}
+function aggregateUetr(store){
+  const byUetr = store.byUetr || {}, trials = store.trials || [];
+  const recs = Object.values(byUetr);
+  const inWin = recs.filter(r => r.deliveryAt && inCairoWindow(r.deliveryAt)).sort((a, b) => new Date(a.deliveryAt) - new Date(b.deliveryAt));
+  const queue = inWin.map((r, i) => ({ pos: i + 1, uetr: r.uetr, bank: r.bank, currency: r.currency, amount: r.amount, deliveryAtCairo: toCairoText(r.deliveryAt), conclusion: r.conclusion }));
+  const summary = {
+    uniqueUetr: recs.length,
+    found: recs.filter(r => r.result === 'found').length,
+    failed: recs.filter(r => r.result === 'failed').length,
+    trials: trials.length,
+    repeats: trials.filter(t => t.repeat).length,
+    inWindow: inWin.length
+  };
+  const recent = trials.slice(-600).reverse().map(t => ({ uetr: t.uetr, atCairo: toCairoText(t.at), result: t.result, repeat: !!t.repeat, bank: t.bank || '', user: t.user || null }));
+  return { summary, queue, trials: recent };
+}
+
 /* ---------- auth ---------- */
 async function handleAuth(req, res, action, secure){
   if (action === 'me')     { const u = currentUser(req); return json(res, 200, u ? { auth: true, user: publicUser(u) } : { auth: false }); }
@@ -311,6 +420,7 @@ const SRV = http.createServer(async (req, res) => {
   try {
     if (u.pathname === '/api/ping')  return json(res, 200, { ok: true });
     if (u.pathname === '/api/track') return await handleTrack(req, res);
+    if (u.pathname === '/api/uetr')  return await handleUetr(req, res, action);
     if (u.pathname === '/api/wishlists') return await handleWishlists(req, res, action);
     if (u.pathname === '/api/auth')  return await handleAuth(req, res, action, secure);
     if (u.pathname === '/api/admin') return await handleAdmin(req, res, action);

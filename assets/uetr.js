@@ -24,7 +24,7 @@ const Uetr = (() => {
           <label class="ut-fld ut-wide"><span>${t('ut_uetr')} *</span><input id="utUetr" type="text" dir="ltr" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" required></label>
           <label class="ut-fld"><span>${t('ut_amount')} *</span><input id="utAmount" type="number" step="any" min="0" dir="ltr" required></label>
           <label class="ut-fld"><span>${t('ut_currency')} *</span><select id="utCurrency" required>${cur}</select></label>
-          <label class="ut-fld"><span>${t('ut_date')} *</span><input id="utDate" type="date" dir="ltr" required></label>
+          <label class="ut-fld"><span>${t('ut_date')} *</span><input id="utDate" type="date" dir="ltr" value="2026-06-23" required></label>
           <label class="ut-fld ut-wide"><span>${t('ut_bank')} <em>(${t('ut_optional')})</em></span><input id="utBank" type="text" placeholder="${t('ut_bank_ph')}"></label>
         </div>
         <div class="ut-actions"><button type="submit" class="btn solid" id="utSubmit">🔎 ${t('ut_search')}</button><span class="ut-err" id="utErr"></span></div>

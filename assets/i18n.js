@@ -7,7 +7,7 @@ const I18N = {
     tab_list:         { ar:'القائمة والخرائط', en:'List & Maps' },
     tab_analytics:    { ar:'لوحة التحليلات', en:'Analytics' },
     tab_premium:      { ar:'القطع المتميزة', en:'Premium Plots' },
-    tab_terms:        { ar:'الشروط والاشتراطات', en:'Terms & Rules' },
+    tab_terms:        { ar:'الشروط', en:'Terms' },
     tab_admin:        { ar:'الإدارة', en:'Admin' },
     terms_note:       { ar:'منقول من «كراسة شروط طرح الأراضي للمصريين بالخارج — المرحلة الحادية عشر (يونيو 2026)». هذا عرض مبسّط؛ يُعتمد النص الرسمي للهيئة عند التعاقد.', en:'Transcribed from the official 11th-Stage conditions booklet (June 2026). This is a simplified rendering; the Authority’s official text prevails.' },
     br_title:         { ar:'اشتراطات البناء', en:'Building requirements' },

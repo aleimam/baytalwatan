@@ -281,6 +281,8 @@ function uetrQueue(byUetr, thisUetr){
   const idx = thisUetr ? inWin.findIndex(r => r.uetr === thisUetr) : -1;
   return { position: idx >= 0 ? idx + 1 : null, total: inWin.length, windowStart: UETR_WIN_START, windowEnd: UETR_WIN_END };
 }
+function cairoDateToIso(dateStr){ if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateStr || ''))) return null; const d = new Date(dateStr + 'T12:00:00+03:00'); return isNaN(d) ? null : d.toISOString(); }
+const uetrResult = (n) => n.found ? 'found' : (n.conclusion === 'unconfigured' || n.conclusion === 'unavailable' ? 'pending' : 'failed');
 async function handleUetr(req, res, action){
   const store = loadUetr();
   if (action === 'admin') {
@@ -290,13 +292,25 @@ async function handleUetr(req, res, action){
   const body = await readBody(req);
   const uetr = String(body.uetr || '').trim().toLowerCase();
   if (!isUetr(uetr)) return json(res, 200, { error: 'invalid_uetr' });
-  const bank = clip(body.bank, 80).trim();
   const me = currentUser(req), ip = clientIp(req), now = new Date().toISOString();
+  if (action === 'report') {   // link-out flow: buyer reports what the free tracker showed
+    const rec = store.byUetr[uetr];
+    if (!rec) return json(res, 200, { error: 'not_searched' });
+    const st = String(body.status || '');
+    if (st === 'delivered') { rec.result = 'found'; rec.conclusion = 'delivered'; rec.deliveryAt = cairoDateToIso(clip(body.deliveredDate, 12).trim()) || rec.deliveryAt || now; }
+    else if (st === 'in_progress') { rec.result = 'found'; rec.conclusion = 'in_progress'; rec.deliveryAt = null; }
+    else if (st === 'not_found') { rec.result = 'failed'; rec.conclusion = 'not_found'; rec.deliveryAt = null; }
+    else return json(res, 200, { error: 'bad_status' });
+    rec.userReported = true; rec.reportedAt = now;
+    saveUetr(store);
+    return json(res, 200, { ok: true, conclusion: rec.conclusion, deliveryAtCairo: toCairoText(rec.deliveryAt), queue: uetrQueue(store.byUetr, uetr) });
+  }
+  const bank = clip(body.bank, 80).trim();
   const existing = store.byUetr[uetr];
   if (existing) {   // repeat: show the prior result; while not yet delivered, re-query so the order updates. Never a second queue entry.
     if (!existing.deliveryAt) {
       const re = normalizeUetr(await Promise.all(UETR_SOURCES.map(fn => fn({ uetr, amount: existing.amount, currency: existing.currency, date: existing.date }))));
-      existing.result = re.found ? 'found' : 'failed';
+      existing.result = uetrResult(re);
       existing.conclusion = re.conclusion; existing.agreement = re.agreement; existing.deliveryAt = re.deliveryAt; existing.sources = re.perSource; existing.refreshedAt = now;
     }
     store.trials.push({ uetr, at: now, result: existing.result, repeat: true, bank, user: me ? me.email : null, ip });
@@ -305,7 +319,7 @@ async function handleUetr(req, res, action){
     return json(res, 200, { repeat: true, firstSearchedAtCairo: toCairoText(existing.searchedAt), sources: existing.sources, conclusion: existing.conclusion, agreement: existing.agreement !== false, deliveryAtCairo: toCairoText(existing.deliveryAt), queue: uetrQueue(store.byUetr, uetr) });
   }
   const norm = normalizeUetr(await Promise.all(UETR_SOURCES.map(fn => fn({ uetr, amount: body.amount, currency: clip(body.currency, 8).toUpperCase().trim(), date: clip(body.date, 12).trim() }))));
-  const rec = { uetr, bank, amount: Number(body.amount) || null, currency: clip(body.currency, 8).toUpperCase().trim(), date: clip(body.date, 12).trim(), searchedAt: now, ip, user: me ? me.email : null, result: norm.found ? 'found' : 'failed', conclusion: norm.conclusion, agreement: norm.agreement, deliveryAt: norm.deliveryAt, sources: norm.perSource };
+  const rec = { uetr, bank, amount: Number(body.amount) || null, currency: clip(body.currency, 8).toUpperCase().trim(), date: clip(body.date, 12).trim(), searchedAt: now, ip, user: me ? me.email : null, result: uetrResult(norm), conclusion: norm.conclusion, agreement: norm.agreement, deliveryAt: norm.deliveryAt, sources: norm.perSource };
   store.byUetr[uetr] = rec;
   store.trials.push({ uetr, at: now, result: rec.result, repeat: false, bank, user: me ? me.email : null, ip });
   if (store.trials.length > UETR_TRIALS_KEEP + 2000) store.trials = store.trials.slice(-UETR_TRIALS_KEEP);
@@ -321,6 +335,7 @@ function aggregateUetr(store){
     uniqueUetr: recs.length,
     found: recs.filter(r => r.result === 'found').length,
     failed: recs.filter(r => r.result === 'failed').length,
+    pending: recs.filter(r => r.result === 'pending').length,
     trials: trials.length,
     repeats: trials.filter(t => t.repeat).length,
     inWindow: inWin.length

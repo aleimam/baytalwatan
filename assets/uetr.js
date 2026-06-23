@@ -6,9 +6,12 @@
 const Uetr = (() => {
   const esc = x => String(x == null ? '' : x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const CURRENCIES = ['USD', 'EUR', 'GBP', 'EGP', 'SAR', 'AED', 'KWD', 'QAR', 'OMR', 'BHD', 'JOD', 'CNY', 'JPY', 'CHF', 'CAD', 'AUD', 'TRY'];
-  const STATES = ['delivered', 'in_progress', 'on_hold', 'rejected', 'unknown', 'unconfigured', 'unavailable', 'error'];
+  const STATES = ['delivered', 'in_progress', 'on_hold', 'rejected', 'not_found', 'pending', 'unknown', 'unconfigured', 'unavailable', 'error'];
   const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
   const badge = state => `<span class="ut-badge ut-${STATES.indexOf(state) >= 0 ? state : 'unknown'}">${t('ut_s_' + (STATES.indexOf(state) >= 0 ? state : 'unknown'))}</span>`;
+  // free web trackers we link out to (we can't read their status, so the buyer reports back)
+  const TRACKERS = [{ name: 'UETR.ai', url: 'https://uetr.ai/' }, { name: 'Ohmyfin', url: 'https://ohmyfin.ai/uetr' }, { name: 'TrackMySwift', url: 'https://trackmyswifts.app/' }];
+  let LAST = {};   // last searched {uetr, amount, currency, date, bank}
 
   async function render(el){
     if (!el) return;
@@ -37,6 +40,7 @@ const Uetr = (() => {
     const uetr = g('utUetr').value.trim(), amount = g('utAmount').value, currency = g('utCurrency').value, date = g('utDate').value, bank = g('utBank').value.trim();
     const err = g('utErr'); err.textContent = '';
     if (!UUID_RE.test(uetr)) { err.textContent = t('ut_bad_uetr'); return; }
+    LAST = { uetr, amount, currency, date, bank };
     const btn = g('utSubmit'); btn.disabled = true; btn.textContent = '… ' + t('ut_searching');
     const out = g('utResult'); out.innerHTML = `<div class="terms-note">${t('ut_searching')}…</div>`;
     let j;
@@ -45,18 +49,58 @@ const Uetr = (() => {
     btn.disabled = false; btn.textContent = '🔎 ' + t('ut_search');
     if (j.error === 'invalid_uetr') { err.textContent = t('ut_bad_uetr'); out.innerHTML = ''; return; }
     out.innerHTML = renderResult(j);
+    wireResult();
   }
 
   function renderResult(j){
     const repeat = j.repeat ? `<div class="ut-repeat">⚠️ ${t('ut_repeat')} <b dir="ltr">${esc(j.firstSearchedAtCairo || '')}</b> ${t('ut_cairo')}. ${t('ut_repeat_note')}</div>` : '';
-    const conc = `<div class="ut-conc ut-c-${j.conclusion || 'unknown'}">
+    const okSources = (j.sources || []).filter(s => s.ok);
+    const sources = okSources.length ? `<h3 class="ut-h">${t('ut_by_source')}</h3><div class="ut-sources">${okSources.map(sourceCard).join('')}</div>` : '';
+    return repeat + renderLinkout() + `<div id="utConc">${renderConc(j)}</div><div id="utQueue">${renderQueue(j.queue, j.deliveryAtCairo)}</div>` + sources;
+  }
+  function renderConc(j){
+    const raw = j.conclusion || 'unknown';
+    const c = (raw === 'unconfigured' || raw === 'unavailable') ? 'pending' : raw;   // link-out: awaiting the buyer's report
+    return `<div class="ut-conc ut-c-${c}">
       <div class="ut-conc-l">${t('ut_conclusion')}</div>
-      <div class="ut-conc-v">${badge(j.conclusion || 'unknown')}</div>
+      <div class="ut-conc-v">${badge(c)}</div>
       ${j.deliveryAtCairo ? `<div class="ut-conc-d">${t('ut_delivered_at')}: <b dir="ltr">${esc(j.deliveryAtCairo)}</b> ${t('ut_cairo')}</div>` : ''}
       ${j.agreement === false ? `<div class="ut-disagree">${t('ut_disagree')}</div>` : ''}</div>`;
-    const queue = renderQueue(j.queue, j.deliveryAtCairo);
-    const sources = (j.sources || []).map(sourceCard).join('');
-    return repeat + conc + queue + `<h3 class="ut-h">${t('ut_by_source')}</h3><div class="ut-sources">${sources || `<div class="terms-note">${t('ut_no_sources')}</div>`}</div>`;
+  }
+  function renderLinkout(){
+    const btns = TRACKERS.map(tr => `<a class="btn solid ut-trk" href="${tr.url}" target="_blank" rel="noopener">${esc(tr.name)} ↗</a>`).join('');
+    return `<div class="ut-linkout">
+      <div class="ut-lo-h">🔗 ${t('ut_lo_title')}</div>
+      <div class="ut-lo-btns">${btns}</div>
+      <div class="ut-lo-copy">${t('ut_lo_copy')} <code class="ut-mono" dir="ltr">${esc(LAST.uetr || '')}</code> <button type="button" class="btn sm" id="utCopyBtn">📋 ${t('ut_lo_copybtn')}</button></div>
+      <div class="ut-report">
+        <div class="ut-lo-h">${t('ut_rep_title')}</div>
+        <div class="ut-rep-row">
+          <span class="ut-rep-deliv"><input type="date" id="utRepDate" dir="ltr"><button type="button" class="btn solid" id="utRepDelivered">✅ ${t('ut_rep_delivered')}</button></span>
+          <button type="button" class="btn" id="utRepProgress">⏳ ${t('ut_rep_progress')}</button>
+          <button type="button" class="btn danger" id="utRepNotfound">❌ ${t('ut_rep_notfound')}</button>
+        </div>
+        <span class="ut-rep-msg" id="utRepMsg"></span>
+      </div>
+    </div>`;
+  }
+  function wireResult(){
+    const cp = document.getElementById('utCopyBtn');
+    if (cp) cp.onclick = async () => { try { await navigator.clipboard.writeText(LAST.uetr || ''); cp.textContent = '✓ ' + t('ut_lo_copied'); } catch (e) {} };
+    const d = document.getElementById('utRepDelivered'); if (d) d.onclick = () => report('delivered', (document.getElementById('utRepDate') || {}).value || '');
+    const p = document.getElementById('utRepProgress'); if (p) p.onclick = () => report('in_progress', '');
+    const n = document.getElementById('utRepNotfound'); if (n) n.onclick = () => report('not_found', '');
+  }
+  async function report(status, date){
+    const msg = document.getElementById('utRepMsg'); if (msg) msg.textContent = t('ut_searching') + '…';
+    if (status === 'delivered' && !/^\d{4}-\d{2}-\d{2}$/.test(date)) { if (msg) msg.textContent = t('ut_rep_needdate'); return; }
+    let j;
+    try { j = await (await fetch('api/uetr?action=report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ uetr: LAST.uetr, status, deliveredDate: date }) })).json(); }
+    catch (e) { if (msg) msg.textContent = t('ut_neterr'); return; }
+    if (j.error) { if (msg) msg.textContent = t('ut_rep_err'); return; }
+    if (msg) msg.textContent = '✓ ' + t('ut_rep_saved');
+    const ce = document.getElementById('utConc'); if (ce) ce.innerHTML = renderConc({ conclusion: j.conclusion, deliveryAtCairo: j.deliveryAtCairo });
+    const qe = document.getElementById('utQueue'); if (qe) qe.innerHTML = renderQueue(j.queue, j.deliveryAtCairo);
   }
 
   function sourceCard(s){
@@ -80,7 +124,7 @@ const Uetr = (() => {
     el.innerHTML = `<div class="ad-bar"><span class="c-muted">${t('vs_loading')}</span></div>`;
     let d; try { d = await (await fetch('api/uetr?action=admin')).json(); } catch (e) { d = {}; }
     const s = d.summary || {};
-    const cards = [[t('ut_a_unique'), s.uniqueUetr || 0], [t('ut_a_found'), s.found || 0], [t('ut_a_failed'), s.failed || 0], [t('ut_a_trials'), s.trials || 0], [t('ut_a_repeats'), s.repeats || 0], [t('ut_a_inwin'), s.inWindow || 0]]
+    const cards = [[t('ut_a_unique'), s.uniqueUetr || 0], [t('ut_a_found'), s.found || 0], [t('ut_a_pending'), s.pending || 0], [t('ut_a_failed'), s.failed || 0], [t('ut_a_trials'), s.trials || 0], [t('ut_a_repeats'), s.repeats || 0], [t('ut_a_inwin'), s.inWindow || 0]]
       .map(c => `<div class="kpi"><div class="lbl">${c[0]}</div><div class="val">${c[1]}</div></div>`).join('');
     const queue = (d.queue || []).map(r => `<tr><td class="num"><b>${r.pos}</b></td><td class="ut-mono" dir="ltr">${esc(r.uetr)}</td><td>${esc(r.bank || '—')}</td><td dir="ltr">${esc(r.currency || '')} ${r.amount != null ? fmt(r.amount) : ''}</td><td class="c-muted" dir="ltr">${esc(r.deliveryAtCairo || '')}</td></tr>`).join('');
     const trials = (d.trials || []).map(x => `<tr><td class="ut-mono" dir="ltr">${esc(x.uetr)}</td><td class="c-muted" dir="ltr">${esc(x.atCairo || '')}</td><td>${x.result === 'found' ? `<span class="ut-badge ut-delivered">${t('ut_a_r_found')}</span>` : `<span class="ut-badge ut-rejected">${t('ut_a_r_failed')}</span>`}</td><td>${x.repeat ? `<span class="c-muted">${t('ut_a_repeat')}</span>` : ''}</td><td>${esc(x.bank || '')}</td><td class="c-muted">${esc(x.user || '')}</td></tr>`).join('');
